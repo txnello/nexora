@@ -1,3 +1,5 @@
+<img width="724" height="413" alt="Screenshot_2" src="https://github.com/user-attachments/assets/df5935e5-d85b-490f-ba2f-f0320d2e38a9" />
+
 # NEXORA
 
 **A smarter way to decide what to work on next.**
@@ -40,7 +42,6 @@ Donations are entirely optional. NEXORA remains free whether or not you donate.
 
 <details>
    <summary>Screenshots</summary>
-   <img width="724" height="413" alt="Screenshot_2" src="https://github.com/user-attachments/assets/df5935e5-d85b-490f-ba2f-f0320d2e38a9" />
    <img width="722" height="413" alt="Screenshot_6" src="https://github.com/user-attachments/assets/010771b5-3e5b-4b78-9ae4-135b5956aff5" />
    <img width="722" height="411" alt="Screenshot_5" src="https://github.com/user-attachments/assets/d4bd2ef1-b45c-4ab3-be13-c65361304187" />
    <img width="722" height="411" alt="Screenshot_7" src="https://github.com/user-attachments/assets/243503bd-119a-4e8b-a090-204fd17d9591" />
@@ -96,7 +97,6 @@ Le donazioni sono del tutto facoltative. NEXORA resta gratuita anche senza donar
 
 <details>
    <summary>Screenshots</summary>
-   <img width="724" height="413" alt="Screenshot_2" src="https://github.com/user-attachments/assets/df5935e5-d85b-490f-ba2f-f0320d2e38a9" />
    <img width="722" height="413" alt="Screenshot_6" src="https://github.com/user-attachments/assets/010771b5-3e5b-4b78-9ae4-135b5956aff5" />
    <img width="722" height="411" alt="Screenshot_5" src="https://github.com/user-attachments/assets/d4bd2ef1-b45c-4ab3-be13-c65361304187" />
    <img width="722" height="411" alt="Screenshot_7" src="https://github.com/user-attachments/assets/243503bd-119a-4e8b-a090-204fd17d9591" />
