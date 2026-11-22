@@ -23,7 +23,7 @@ if (Test-Path -LiteralPath $DataPath) {
     throw "The demo folder already exists and will not be modified: $DataPath. Choose another folder with -DataPath."
 }
 if (Test-Path -LiteralPath $shortcutPath) {
-    throw "The demo shortcut already exists and will not be overwritten: $shortcutPath."
+    Remove-Item -LiteralPath $shortcutPath -Force
 }
 
 if (-not $AppExePath) {
