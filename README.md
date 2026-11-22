@@ -38,9 +38,15 @@ Donations are entirely optional. NEXORA remains free whether or not you donate.
 
 ## Screenshots
 
-<!-- Add screenshots to the public repository (for example, in a screenshots/ folder) and replace these notes with image links.
-Suggested images: dashboard, task list, task details, and settings.
--->
+<details>
+   <summary>Screenshots</summary>
+   <img width="724" height="413" alt="Screenshot_2" src="https://github.com/user-attachments/assets/df5935e5-d85b-490f-ba2f-f0320d2e38a9" />
+   <img width="722" height="413" alt="Screenshot_6" src="https://github.com/user-attachments/assets/010771b5-3e5b-4b78-9ae4-135b5956aff5" />
+   <img width="722" height="411" alt="Screenshot_5" src="https://github.com/user-attachments/assets/d4bd2ef1-b45c-4ab3-be13-c65361304187" />
+   <img width="722" height="411" alt="Screenshot_7" src="https://github.com/user-attachments/assets/243503bd-119a-4e8b-a090-204fd17d9591" />
+   <img width="723" height="413" alt="Screenshot_3" src="https://github.com/user-attachments/assets/022c880e-a113-4aba-81cd-7e230869cd27" />
+   <img width="724" height="414" alt="Screenshot_4" src="https://github.com/user-attachments/assets/34b132da-7eac-4fe9-a654-274a393dc12c" />
+</details>
 
 ## License
 
@@ -88,9 +94,15 @@ Le donazioni sono del tutto facoltative. NEXORA resta gratuita anche senza donar
 
 ## Screenshot
 
-<!-- Aggiungi gli screenshot alla repo pubblica (per esempio in screenshots/) e sostituisci queste note con i link alle immagini.
-Immagini suggerite: dashboard, elenco task, dettagli task e impostazioni.
--->
+<details>
+   <summary>Screenshots</summary>
+   <img width="724" height="413" alt="Screenshot_2" src="https://github.com/user-attachments/assets/df5935e5-d85b-490f-ba2f-f0320d2e38a9" />
+   <img width="722" height="413" alt="Screenshot_6" src="https://github.com/user-attachments/assets/010771b5-3e5b-4b78-9ae4-135b5956aff5" />
+   <img width="722" height="411" alt="Screenshot_5" src="https://github.com/user-attachments/assets/d4bd2ef1-b45c-4ab3-be13-c65361304187" />
+   <img width="722" height="411" alt="Screenshot_7" src="https://github.com/user-attachments/assets/243503bd-119a-4e8b-a090-204fd17d9591" />
+   <img width="723" height="413" alt="Screenshot_3" src="https://github.com/user-attachments/assets/022c880e-a113-4aba-81cd-7e230869cd27" />
+   <img width="724" height="414" alt="Screenshot_4" src="https://github.com/user-attachments/assets/34b132da-7eac-4fe9-a654-274a393dc12c" />
+</details>
 
 ## Licenza
 
