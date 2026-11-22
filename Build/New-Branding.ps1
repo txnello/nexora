@@ -127,7 +127,7 @@ function ConvertTo-SvgPath([System.Windows.Media.PathGeometry]$pg) {
         foreach ($s in $f.Segments) {
             if ($s -is [System.Windows.Media.LineSegment]) { [void]$sb.Append(('L{0} {1}' -f $s.Point.X.ToString('0.##', $inv), $s.Point.Y.ToString('0.##', $inv))) }
             elseif ($s -is [System.Windows.Media.PolyLineSegment]) { foreach ($p in $s.Points) { [void]$sb.Append(('L{0} {1}' -f $p.X.ToString('0.##', $inv), $p.Y.ToString('0.##', $inv))) } }
-            else { throw "Segmento non gestito: $($s.GetType().Name)" }
+            else { throw "Unhandled segment: $($s.GetType().Name)" }
         }
         if ($f.IsClosed) { [void]$sb.Append('Z') }
     }
@@ -245,5 +245,5 @@ Save-Bmp { param($dc) Draw-WizardLarge $dc 2.0 } 328 628 (Join-Path $InstallerDi
 Save-Bmp { param($dc) Draw-WizardSmall $dc 1.0 } 55 58 (Join-Path $InstallerDir 'wizard-small.bmp')
 Save-Bmp { param($dc) Draw-WizardSmall $dc 2.0 } 110 116 (Join-Path $InstallerDir 'wizard-small@2x.bmp')
 
-Write-Host "Brand assets generati in $OutDir"
+Write-Host "Brand assets generated in $OutDir"
 Get-ChildItem $OutDir | ForEach-Object { '{0,-26} {1,8} B' -f $_.Name, $_.Length }

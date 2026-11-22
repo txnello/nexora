@@ -15,36 +15,36 @@ function Test-Case {
     try { & $Body; $script:pass++; Write-Host "  [OK]   $Name" -ForegroundColor Green }
     catch { $script:fail++; Write-Host "  [FAIL] $Name -> $($_.Exception.Message)" -ForegroundColor Red }
 }
-function Assert-True { param($Cond, [string]$Msg = 'condizione falsa') if (-not $Cond) { throw $Msg } }
-function Assert-Eq { param($Actual, $Expected, [string]$Msg = '') if ($Actual -ne $Expected) { throw "attesi '$Expected', trovati '$Actual' $Msg" } }
-function Assert-Throws { param([scriptblock]$Body, [string]$Msg = 'eccezione attesa') $ok = $false; try { & $Body } catch { $ok = $true }; if (-not $ok) { throw $Msg } }
+function Assert-True { param($Cond, [string]$Msg = 'condition is false') if (-not $Cond) { throw $Msg } }
+function Assert-Eq { param($Actual, $Expected, [string]$Msg = '') if ($Actual -ne $Expected) { throw "expected '$Expected', found '$Actual' $Msg" } }
+function Assert-Throws { param([scriptblock]$Body, [string]$Msg = 'expected exception') $ok = $false; try { & $Body } catch { $ok = $true }; if (-not $ok) { throw $Msg } }
 function New-In { param([string]$Code, [string]$Title = 'Prova', $Due = $null, [string]$Prio = 'medium', [string]$Status = 'todo', [string]$Ref = 'Anna', [string]$Link = '')
     @{ Code = $Code; Title = $Title; Description = 'desc'; Referent = $Ref; Link = $Link; StatusId = $Status; PriorityId = $Prio; DueDate = $Due } }
 
 Write-Host "`nNexora - test (PowerShell $($PSVersionTable.PSVersion))" -ForegroundColor Cyan
-Write-Host "Cartella dati di test: $tmp`n"
+Write-Host "Test data folder: $tmp`n"
 
-Write-Host 'Primo avvio e persistenza' -ForegroundColor Yellow
-Test-Case 'primo avvio senza file: crea settings/tasks/history con default' {
+Write-Host 'First launch and persistence' -ForegroundColor Yellow
+Test-Case 'first launch without files: creates settings/tasks/history with defaults' {
     $st = Initialize-AppState
     Assert-Eq $st.Tasks.Count 0
     Assert-Eq $st.Settings.statuses.Count 5
     Assert-Eq $st.Settings.priorities.Count 4
-    Assert-True $st.Settings.openOnStartup 'avvio automatico non attivo per default'
-    Assert-True $st.Settings.hideOnClose 'nascondi alla chiusura non attivo per default'
+    Assert-True $st.Settings.openOnStartup 'automatic startup not enabled by default'
+    Assert-True $st.Settings.hideOnClose 'hide on close not enabled by default'
     Assert-Eq $st.Settings.preferencesVersion 2
-    foreach ($f in 'tasks.json', 'settings.json', 'history.json') { Assert-True (Test-Path (Join-Path $tmp $f)) "manca $f" }
+    foreach ($f in 'tasks.json', 'settings.json', 'history.json') { Assert-True (Test-Path (Join-Path $tmp $f)) "missing $f" }
     Assert-Eq $st.Warnings.Count 0
 }
 
-Write-Host 'Creazione / modifica / eliminazione' -ForegroundColor Yellow
+Write-Host 'Creation / editing / deletion' -ForegroundColor Yellow
 $today = (Get-Date).Date
-Test-Case 'creazione task valido' {
+Test-Case 'create a valid task' {
     $t = Add-AppTask (New-In 'DEV-1024' 'Primo task' $today.AddDays(3))
     Assert-Eq $t.code 'DEV-1024'; Assert-Eq $script:State.Tasks.Count 1
-    Assert-True ($null -ne $t.score) 'punteggio non calcolato'
+    Assert-True ($null -ne $t.score) 'score not calculated'
 }
-Test-Case 'validazione: titolo/codice vuoti, codice duplicato, stato non valido' {
+Test-Case 'validation: empty title/code, duplicate code, invalid status' {
     Assert-Throws { Add-AppTask (New-In 'X-1' '') }
     Assert-Throws { Add-AppTask (New-In '' 'T') }
     Assert-Throws { Add-AppTask (New-In 'dev-1024' 'dup') } 'codice duplicato (case-insensitive) accettato'
@@ -52,12 +52,12 @@ Test-Case 'validazione: titolo/codice vuoti, codice duplicato, stato non valido'
     Assert-Throws { Add-AppTask (New-In 'bad code!' 'T') }
     Assert-Eq $script:State.Tasks.Count 1
 }
-Test-Case 'codice automatico progressivo' {
+Test-Case 'progressive automatic code' {
     $c = Get-NextTaskCode; Assert-Eq $c 'TSK-1001'
     $null = Add-AppTask (New-In $c 'Auto')
     Assert-Eq (Get-NextTaskCode) 'TSK-1002'
 }
-Test-Case 'modifica task: campi, cronologia, data modifica' {
+Test-Case 'edit task: fields, history, modified date' {
     $t = Get-TaskById ($script:State.Tasks[0].id)
     $old = $t.updatedAt; Start-Sleep -Milliseconds 1100
     $null = Update-AppTask $t.id (New-In 'DEV-1024' 'Titolo nuovo' $today.AddDays(1) 'high' 'doing' 'Bruno')
@@ -65,15 +65,15 @@ Test-Case 'modifica task: campi, cronologia, data modifica' {
     Assert-Eq $t.title 'Titolo nuovo'; Assert-Eq $t.referent 'Bruno'; Assert-Eq $t.statusId 'doing'
     Assert-True ($t.updatedAt -gt $old) 'updatedAt non aggiornato'
     $h = Get-TaskHistory $t.id
-    Assert-True (@($h | Where-Object type -eq 'stato').Count -ge 1) 'manca voce di cronologia per lo stato'
+    Assert-True (@($h | Where-Object type -eq 'stato').Count -ge 1) 'missing history entry for the status'
 }
-Test-Case 'duplicazione task' {
+Test-Case 'duplicate task' {
     $src = $script:State.Tasks[0]
     $c = Copy-AppTask $src.id
     Assert-True ($c.id -ne $src.id); Assert-True ($c.code -ne $src.code); Assert-Eq $c.reminders 0
     Assert-True ($c.title -like '*(copy)')
 }
-Test-Case 'duplicazione multipla conserva i dati e genera codici unici' {
+Test-Case 'multiple duplication preserves data and generates unique codes' {
     $sources = @($script:State.Tasks[0], $script:State.Tasks[1])
     $copies = @(Copy-AppTasks @($sources[0].id, $sources[1].id))
     Assert-Eq $copies.Count 2
@@ -84,7 +84,7 @@ Test-Case 'duplicazione multipla conserva i dati e genera codici unici' {
     Assert-Eq $copies[0].reminders 0; Assert-Eq $copies[1].reminders 0
     Assert-Throws { Copy-AppTasks @($sources[0].id) }
 }
-Test-Case 'link facoltativo: validazione, persistenza, modifica, stato e duplicazione' {
+Test-Case 'optional link: validation, persistence, editing, status and duplication' {
     $url = 'https://example.test/tasks/42?view=full'
     $t = Add-AppTask (New-In 'LINK-1' 'Task con link' $null 'medium' 'todo' 'Anna' $url)
     Assert-Eq $t.link $url
@@ -97,22 +97,22 @@ Test-Case 'link facoltativo: validazione, persistenza, modifica, stato e duplica
     $taskInput = New-In 'LINK-1' 'Task con link' $null 'medium' 'doing' 'Anna'
     $taskInput.Remove('Link')
     $null = Update-AppTask $t.id $taskInput
-    Assert-Eq (Get-TaskById $t.id).link $url 'aggiornamento senza Link deve preservare il collegamento'
+    Assert-Eq (Get-TaskById $t.id).link $url 'update without Link must preserve the link'
     $copy = Copy-AppTask $t.id
     Assert-Eq $copy.link $url
     $null = Reload-AppState
-    Assert-Eq (Get-TaskById $t.id).link $url 'link perso dopo round-trip JSON'
+    Assert-Eq (Get-TaskById $t.id).link $url 'link lost after JSON round-trip'
     $null = Update-AppTask $t.id (New-In 'LINK-1' 'Task senza link' $null 'medium' 'doing' 'Anna')
     Assert-Eq (Get-TaskById $t.id).link ''
 }
-Test-Case 'eliminazione task (con snapshot di sicurezza)' {
+Test-Case 'delete task (with safety snapshot)' {
     $n = $script:State.Tasks.Count; $id = $script:State.Tasks[-1].id
     Remove-AppTask $id
     Assert-Eq $script:State.Tasks.Count ($n - 1)
     Assert-True ($null -eq (Get-TaskById $id))
-    Assert-True (@(Get-Snapshots | Where-Object Reason -eq 'pre-delete').Count -ge 1) 'snapshot mancante'
+    Assert-True (@(Get-Snapshots | Where-Object Reason -eq 'pre-delete').Count -ge 1) 'missing snapshot'
 }
-Test-Case 'eliminazione multipla crea un solo snapshot e conserva la cronologia' {
+Test-Case 'multiple deletion creates a single snapshot and preserves history' {
     $copies = @($script:State.Tasks | Where-Object { $_.title -like '*(copy)' } | Select-Object -First 2)
     Assert-Eq $copies.Count 2
     $before = @(Get-Snapshots | Where-Object Reason -eq 'pre-delete').Count
@@ -123,21 +123,21 @@ Test-Case 'eliminazione multipla crea un solo snapshot e conserva la cronologia'
     Assert-Eq @($script:State.History | Where-Object { $_.taskId -in @($copies[0].id, $copies[1].id) -and $_.type -eq 'eliminato' }).Count 2
     Assert-Throws { Remove-AppTasks @($script:State.Tasks[0].id) }
 }
-Test-Case 'salvataggio e ricaricamento JSON (round-trip)' {
+Test-Case 'JSON save and reload (round-trip)' {
     $before = $script:State.Tasks | ForEach-Object { "$($_.id)|$($_.code)|$($_.title)|$($_.dueDate)|$($_.statusId)|$($_.score)" }
     $st = Reload-AppState
     $after = $st.Tasks | ForEach-Object { "$($_.id)|$($_.code)|$($_.title)|$($_.dueDate)|$($_.statusId)|$($_.score)" }
     Assert-Eq ($after -join ';') ($before -join ';')
 }
 
-Write-Host 'Motore di prioritizzazione' -ForegroundColor Yellow
+Write-Host 'Prioritization engine' -ForegroundColor Yellow
 $S = (Get-DefaultSettings)
-Test-Case 'fattori normalizzati 0..100' {
-    foreach ($d in -30, -1, 0, 1, 7, 30, 365) { $v = Get-DeadlineFactor $today.AddDays($d) $today $S.scoring; Assert-True ($v -ge 0 -and $v -le 100) "scadenza $d -> $v" }
+Test-Case 'normalized factors 0..100' {
+    foreach ($d in -30, -1, 0, 1, 7, 30, 365) { $v = Get-DeadlineFactor $today.AddDays($d) $today $S.scoring; Assert-True ($v -ge 0 -and $v -le 100) "due date $d -> $v" }
     foreach ($n in 0, 1, 5, 50) { $v = Get-ReminderFactor $n $S.scoring; Assert-True ($v -ge 0 -and $v -le 100) }
     foreach ($a in 0, 10, 90, 5000) { $v = Get-AgeFactor $today.AddDays(-$a) $today $S.scoring; Assert-True ($v -ge 0 -and $v -le 100) }
 }
-Test-Case 'scadenza: scaduto >= oggi > domani > lontano; nessuna scadenza = neutro' {
+Test-Case 'due date: overdue >= today > tomorrow > far; no due date = neutral' {
     $o = Get-DeadlineFactor $today.AddDays(-3) $today $S.scoring
     $t0 = Get-DeadlineFactor $today $today $S.scoring
     $t1 = Get-DeadlineFactor $today.AddDays(1) $today $S.scoring
@@ -146,36 +146,36 @@ Test-Case 'scadenza: scaduto >= oggi > domani > lontano; nessuna scadenza = neut
     Assert-True ($o -eq 100); Assert-True ($t0 -ge 90)
     Assert-Eq (Get-DeadlineFactor $null $today $S.scoring) 40
 }
-Test-Case 'solleciti: crescenti, progressivi (rendimenti decrescenti) e limitati' {
+Test-Case 'reminders: increasing, progressive (diminishing returns) and capped' {
     $a = 0..8 | ForEach-Object { Get-ReminderFactor $_ $S.scoring }
     for ($i = 1; $i -lt $a.Count; $i++) { Assert-True ($a[$i] -gt $a[$i - 1]) "non crescente a $i" }
     Assert-True (($a[1] - $a[0]) -gt ($a[8] - $a[7])) 'incrementi non decrescenti'
     Assert-True ((Get-ReminderFactor 1000 $S.scoring) -le 100)
 }
-Test-Case 'anzianita: cresce e si ferma al tetto' {
+Test-Case 'age: grows and stops at the cap' {
     $x = Get-AgeFactor $today.AddDays(-10) $today $S.scoring
     $y = Get-AgeFactor $today.AddDays(-60) $today $S.scoring
     Assert-True ($y -gt $x)
     Assert-Eq (Get-AgeFactor $today.AddDays(-90) $today $S.scoring) 100
     Assert-Eq (Get-AgeFactor $today.AddDays(-900) $today $S.scoring) 100
 }
-Test-Case 'priorita manuale: min=0, max=100, ordine rispettato' {
+Test-Case 'manual priority: min=0, max=100, order respected' {
     $lv = $S.priorities
     Assert-Eq (Get-PriorityFactor 'low' $lv) 0; Assert-Eq (Get-PriorityFactor 'urgent' $lv) 100
     Assert-True ((Get-PriorityFactor 'high' $lv) -gt (Get-PriorityFactor 'medium' $lv))
 }
-Test-Case 'formula: punteggio = somma pesata dei fattori' {
+Test-Case 'formula: score = weighted sum of factors' {
     $t = [pscustomobject]@{ priorityId = 'high'; dueDate = Format-IsoDate $today.AddDays(2); reminders = 2; createdAt = Format-IsoDateTime $today.AddDays(-30) }
     $b = Get-ScoreBreakdown $t $S $today
     $exp = ($b.Priority * 35 + $b.Deadline * 35 + $b.Reminders * 20 + $b.Age * 10) / 100
     Assert-True ([math]::Abs($b.Total - $exp) -lt 0.15) "$($b.Total) vs $exp"
 }
-Test-Case 'la priorita manuale da sola non determina il punteggio' {
+Test-Case 'manual priority alone does not determine the score' {
     $urg = [pscustomobject]@{ priorityId = 'urgent'; dueDate = $null; reminders = 0; createdAt = Format-IsoDateTime $today }
     $late = [pscustomobject]@{ priorityId = 'low'; dueDate = Format-IsoDate $today.AddDays(-2); reminders = 4; createdAt = Format-IsoDateTime $today.AddDays(-60) }
-    Assert-True ((Get-TaskScore $late $S $today) -gt (Get-TaskScore $urg $S $today)) 'task scaduto+sollecitato dovrebbe superare urgente senza scadenza'
+    Assert-True ((Get-TaskScore $late $S $today) -gt (Get-TaskScore $urg $S $today)) 'overdue+reminded task should outrank urgent without due date'
 }
-Test-Case 'pesi: somma sempre 100 dopo normalizzazione' {
+Test-Case 'weights: sum always 100 after normalization' {
     foreach ($set in @(@(35, 35, 20, 10), @(1, 1, 1, 1), @(50, 50, 50, 50), @(0, 0, 0, 0), @(33.3, 33.3, 33.3, 0.1), @(100, 0, 0, 0))) {
         $n = Get-NormalizedWeights ([double[]]$set); Assert-Eq (($n | Measure-Object -Sum).Sum) 100 ($set -join ',')
     }
@@ -184,7 +184,7 @@ Test-Case 'pesi: somma sempre 100 dopo normalizzazione' {
     Assert-Eq ($w.priority + $w.deadline + $w.reminders + $w.age) 100
     Set-ScoringWeights 35 35 20 10
 }
-Test-Case 'cambiare i pesi cambia la classifica' {
+Test-Case 'changing the weights changes the ranking' {
     $a = Add-AppTask (New-In 'RK-1' 'solo priorita' $null 'urgent')
     $b = Add-AppTask (New-In 'RK-2' 'solo scadenza' $today 'low')
     Set-ScoringWeights 90 4 3 3; $r1 = (Get-TaskById $a.id).score - (Get-TaskById $b.id).score
@@ -193,15 +193,15 @@ Test-Case 'cambiare i pesi cambia la classifica' {
     Set-ScoringWeights 35 35 20 10
 }
 
-Write-Host 'Solleciti' -ForegroundColor Yellow
-Test-Case 'registrazione sollecito: contatore, data, punteggio, cronologia' {
+Write-Host 'Reminders' -ForegroundColor Yellow
+Test-Case 'register reminder: counter, date, score, history' {
     $t = $script:State.Tasks[0]; $s0 = $t.score
     $null = Add-TaskReminder $t.id; $null = Add-TaskReminder $t.id
     $t = Get-TaskById $t.id
     Assert-Eq $t.reminders 2; Assert-True ($null -ne $t.lastReminderAt); Assert-True ($t.score -gt $s0)
     Assert-Eq (@(Get-TaskHistory $t.id | Where-Object type -eq 'sollecito').Count) 2
 }
-Test-Case 'annulla ultimo sollecito' {
+Test-Case 'undo last reminder' {
     $t = $script:State.Tasks[0]
     $null = Undo-TaskReminder $t.id; $t = Get-TaskById $t.id
     Assert-Eq $t.reminders 1
@@ -209,8 +209,8 @@ Test-Case 'annulla ultimo sollecito' {
     Assert-Eq $t.reminders 0; Assert-True ($null -eq $t.lastReminderAt)
 }
 
-Write-Host 'Stati personalizzabili' -ForegroundColor Yellow
-Test-Case 'crea, rinomina, ricolora stato' {
+Write-Host 'Custom statuses' -ForegroundColor Yellow
+Test-Case 'create, rename, recolor status' {
     $s = Add-Status 'In revisione' '#8B5CF6' $false
     Assert-Eq $script:State.Settings.statuses.Count 6
     Update-Status $s.id 'In review' '#06B6D4' $false
@@ -218,25 +218,25 @@ Test-Case 'crea, rinomina, ricolora stato' {
     Assert-Throws { Add-Status 'in review' } 'nome duplicato accettato'
     Assert-Throws { Add-Status 'x' 'rosso' } 'colore non valido accettato'
 }
-Test-Case 'riordino stati' {
+Test-Case 'reorder statuses' {
     $first = $script:State.Settings.statuses[0].id
     Move-Status $first 1
     Assert-Eq $script:State.Settings.statuses[1].id $first
     Move-Status $first -1
     Assert-Eq $script:State.Settings.statuses[0].id $first
 }
-Test-Case 'stato concluso: escluso dalla classifica e dalle statistiche aperte' {
+Test-Case 'completed status: excluded from ranking and open statistics' {
     $t = Add-AppTask (New-In 'CL-1' 'da chiudere' $today 'urgent')
     Assert-True ($null -ne (Get-TaskById $t.id).score)
     $open0 = (Get-DashboardStats).Open
     $null = Set-AppTaskStatus $t.id 'done'
     $t = Get-TaskById $t.id
-    Assert-True ($null -eq $t.score) 'task concluso ha ancora un punteggio'
+    Assert-True ($null -eq $t.score) 'completed task still has a score'
     Assert-True ($null -ne $t.completedAt)
     Assert-Eq (Get-DashboardStats).Open ($open0 - 1)
     Assert-Throws { Add-TaskReminder $t.id } 'sollecito su task concluso accettato'
 }
-Test-Case 'configurare quali stati sono conclusi (cambia i conteggi)' {
+Test-Case 'configure which statuses are completed (changes counts)' {
     $s = Add-Status 'Archiviato' '#6B7280' $false
     $t = Add-AppTask (New-In 'AR-1' 'arch' $null 'medium' $s.id)
     $o = (Get-DashboardStats).Open
@@ -246,13 +246,13 @@ Test-Case 'configurare quali stati sono conclusi (cambia i conteggi)' {
     Update-Status $s.id 'Archiviato' '#6B7280' $false
     Assert-Eq (Get-DashboardStats).Open $o
 }
-Test-Case 'eliminazione stato in uso: i task vengono spostati' {
+Test-Case 'delete a status in use: tasks are moved' {
     $s = Add-Status 'Temp' '#EAB308' $false
     $t = Add-AppTask (New-In 'TM-1' 'tmp' $null 'medium' $s.id)
     $r = Remove-Status $s.id
     Assert-Eq $r.Moved 1; Assert-True ($null -ne (Get-StatusById (Get-TaskById $t.id).statusId))
 }
-Test-Case 'non si puo eliminare/chiudere l ultimo stato aperto' {
+Test-Case 'cannot delete/close the last open status' {
     $open = @($script:State.Settings.statuses | Where-Object { -not $_.isClosed })
     $ids = @($open | Select-Object -Skip 1 | ForEach-Object { $_.id })
     foreach ($id in $ids) { $null = Remove-Status $id }
@@ -265,8 +265,8 @@ Test-Case 'non si puo eliminare/chiudere l ultimo stato aperto' {
     Update-AllScoresAndSave
 }
 
-Write-Host 'Livelli di priorita' -ForegroundColor Yellow
-Test-Case 'crea, modifica, elimina livello (con riassegnazione)' {
+Write-Host 'Priority levels' -ForegroundColor Yellow
+Test-Case 'create, edit, delete level (with reassignment)' {
     $p = Add-PriorityLevel 'Critica' 5 '#DC2626'
     $t = Add-AppTask (New-In 'PR-1' 'p' $null $p.id)
     Assert-Eq (Get-PriorityFactor $p.id $script:State.Settings.priorities) 100
@@ -275,8 +275,8 @@ Test-Case 'crea, modifica, elimina livello (con riassegnazione)' {
     Assert-Eq $r.Moved 1; Assert-Eq (Get-TaskById $t.id).priorityId 'urgent'
 }
 
-Write-Host 'Referenti personalizzabili' -ForegroundColor Yellow
-Test-Case 'crea, rinomina e riordina referente' {
+Write-Host 'Custom owners' -ForegroundColor Yellow
+Test-Case 'create, rename and reorder owner' {
     $r = Add-Referent 'Mario Rossi'
     Assert-True ($null -ne (Get-ReferentById $r.id))
     Update-Referent $r.id 'Mario R.'
@@ -291,7 +291,7 @@ Test-Case 'crea, rinomina e riordina referente' {
         Assert-Eq $script:State.Settings.referents[0].id $s.id
     }
 }
-Test-Case 'rinomina ed eliminazione referente aggiornano i task' {
+Test-Case 'renaming and deleting an owner updates the tasks' {
     $r = Add-Referent 'Team Test'
     $t = Add-AppTask (New-In 'RF-1' 'referente' $null 'medium' 'todo' 'Team Test')
     Update-Referent $r.id 'Team QA'
@@ -300,7 +300,7 @@ Test-Case 'rinomina ed eliminazione referente aggiornano i task' {
     Assert-Eq $removed.Moved 1
     Assert-Eq (Get-TaskById $t.id).referent $removed.TargetName
 }
-Test-Case 'referenti dei task esistenti vengono importati nelle impostazioni' {
+Test-Case 'owners of existing tasks are imported into settings' {
     $t = Add-AppTask (New-In 'RF-2' 'legacy owner' $null 'medium' 'todo' 'Legacy Owner')
     $script:State.Settings.referents = ConvertTo-List @()
     Save-Settings
@@ -308,8 +308,8 @@ Test-Case 'referenti dei task esistenti vengono importati nelle impostazioni' {
     Assert-True ($null -ne ($st.Settings.referents | Where-Object { $_.name -ieq 'Legacy Owner' })) 'referente legacy non importato'
 }
 
-Write-Host 'Backup, ripristino, robustezza' -ForegroundColor Yellow
-Test-Case 'export backup completo e import (ripristino)' {
+Write-Host 'Backup, restore, robustness' -ForegroundColor Yellow
+Test-Case 'full backup export and import (restore)' {
     $n = $script:State.Tasks.Count
     $zip = Join-Path $tmp 'export-test.zip'
     $null = New-Snapshot -Reason 'manual' -DestinationFile $zip
@@ -320,15 +320,15 @@ Test-Case 'export backup completo e import (ripristino)' {
     Restore-BackupArchive $zip
     $st = Reload-AppState
     Assert-Eq $st.Tasks.Count $n; Assert-True ($null -ne (Get-TaskById $id))
-    Assert-True (@(Get-Snapshots | Where-Object Reason -eq 'pre-import').Count -ge 1) 'manca snapshot pre-import'
+    Assert-True (@(Get-Snapshots | Where-Object Reason -eq 'pre-import').Count -ge 1) 'missing pre-import snapshot'
 }
-Test-Case 'import di archivio non valido viene rifiutato senza toccare i dati' {
+Test-Case 'invalid archive import is rejected without touching data' {
     $bad = Join-Path $tmp 'bad.zip'; Set-Content $bad 'non sono uno zip'
     $n = $script:State.Tasks.Count
     Assert-Throws { Restore-BackupArchive $bad }
     Assert-Eq (Reload-AppState).Tasks.Count $n
 }
-Test-Case 'tasks.json corrotto: ripristino automatico da .bak con avviso' {
+Test-Case 'corrupt tasks.json: automatic restore from .bak with warning' {
     $null = Update-AppTask $script:State.Tasks[0].id (New-In $script:State.Tasks[0].code 'dopo-bak')  # genera un .bak recente
     $n = $script:State.Tasks.Count
     Set-Content (Join-Path $tmp 'tasks.json') '{ questo non e json'
@@ -337,14 +337,14 @@ Test-Case 'tasks.json corrotto: ripristino automatico da .bak con avviso' {
     Assert-Eq $st.Tasks.Count $n
     Assert-True (@(Get-ChildItem (Join-Path $tmp 'Backups') -Filter 'corrotto-*').Count -ge 1) 'file corrotto non conservato'
 }
-Test-Case 'file mancanti e JSON vuoto: l app riparte senza errori' {
+Test-Case 'missing files and empty JSON: the app restarts without errors' {
     Remove-Item (Join-Path $tmp 'tasks.json'), (Join-Path $tmp 'tasks.json.bak'), (Join-Path $tmp 'settings.json') -ErrorAction SilentlyContinue
     Set-Content (Join-Path $tmp 'history.json') ''
     $st = Reload-AppState
     Assert-Eq $st.Tasks.Count 0; Assert-Eq $st.Settings.statuses.Count 5
     Assert-True (Test-Path (Join-Path $tmp 'tasks.json'))
 }
-Test-Case 'dati incoerenti nel JSON vengono riparati (stato/priorita inesistenti, date, duplicati)' {
+Test-Case 'inconsistent JSON data is repaired (nonexistent status/priority, dates, duplicates)' {
     $raw = '{"version":1,"tasks":[{"id":"a","code":"Z-1","title":"x","statusId":"boh","priorityId":"boh","createdAt":"non-una-data","dueDate":"2026-13-45","reminders":-4,"link":"javascript:alert(1)"},{"id":"a","code":"z-1","title":"y"}]}'
     Set-Content (Join-Path $tmp 'tasks.json') $raw
     $st = Reload-AppState
@@ -353,10 +353,10 @@ Test-Case 'dati incoerenti nel JSON vengono riparati (stato/priorita inesistenti
     Assert-True ($st.Tasks[0].id -ne $st.Tasks[1].id); Assert-True ($st.Tasks[0].code -ne $st.Tasks[1].code)
     Assert-Eq $st.Tasks[0].reminders 0; Assert-True ($null -eq $st.Tasks[0].dueDate); Assert-Eq $st.Tasks[0].link ''
 }
-Test-Case 'scrittura atomica: nessun file .tmp residuo' {
+Test-Case 'atomic write: no leftover .tmp file' {
     Assert-Eq @(Get-ChildItem $tmp -Filter '*.tmp').Count 0
 }
-Test-Case 'pulizia snapshot: tiene gli ultimi N, mai i manuali' {
+Test-Case 'snapshot cleanup: keeps the last N, never manual ones' {
     1..5 | ForEach-Object { $null = New-Snapshot -Reason 'auto'; Start-Sleep -Milliseconds 20 }
     $null = New-Snapshot -Reason 'manual'
     Remove-OldSnapshots -Keep 2
@@ -364,17 +364,17 @@ Test-Case 'pulizia snapshot: tiene gli ultimi N, mai i manuali' {
     Assert-True (@(Get-Snapshots | Where-Object Reason -eq 'manual').Count -ge 1)
 }
 
-Write-Host 'Formato date' -ForegroundColor Yellow
-Test-Case 'formattazione e parsing nel formato configurato' {
+Write-Host 'Date format' -ForegroundColor Yellow
+Test-Case 'formatting and parsing in the configured format' {
     foreach ($f in Get-DateFormats) {
         $s = [pscustomobject]@{ dateFormat = $f }
         $txt = Format-AppDate ([datetime]'2026-03-09') $s
         $back = ConvertFrom-AppDate $txt $s
-        Assert-Eq $back.Date ([datetime]'2026-03-09').Date "formato $f ('$txt')"
+        Assert-Eq $back.Date ([datetime]'2026-03-09').Date "format $f ('$txt')"
     }
     Assert-True ($null -eq (ConvertFrom-AppDate 'pippo' $null))
 }
-Test-Case 'suggerimento relativo della scadenza' {
+Test-Case 'relative due-date hint' {
     Assert-Eq (Format-DueHint $today $today) 'today'; Assert-Eq (Format-DueHint $today.AddDays(1) $today) 'tomorrow'
     Assert-Eq (Format-DueHint $today.AddDays(-3) $today) 'overdue by 3 days'; Assert-Eq (Format-DueHint $today.AddDays(5) $today) 'in 5 days'
 }
@@ -411,16 +411,6 @@ Test-Case 'a second instance requests activation instead of showing an already-r
         $activation.Dispose()
         $script:ActivationEventName = $previousEventName
     }
-}
-Test-Case 'MSIX declares an enabled startup task' {
-    $manifestPath = Join-Path $root 'Build\MSIX\Package.appxmanifest'
-    $manifest = New-Object System.Xml.XmlDocument
-    $manifest.Load($manifestPath)
-    $extension = $manifest.SelectSingleNode("//*[local-name()='Extension' and @Category='windows.startupTask']")
-    $task = $null
-    if ($extension) { $task = $extension.SelectSingleNode("./*[local-name()='StartupTask']") }
-    Assert-True ($task -and $task.GetAttribute('TaskId') -eq 'NexoraStartup' -and
-        $task.GetAttribute('Enabled') -eq 'true' -and $extension.GetAttribute('Executable') -eq 'Nexora.exe') 'MSIX startup task missing or disabled'
 }
 Test-Case 'legacy Data folder is COPIED to the new location (original untouched, nothing overwritten)' {
     $fakeRoot = Join-Path $tmp 'fakeapp'; New-Item -ItemType Directory -Force (Join-Path $fakeRoot 'Data') | Out-Null
@@ -575,24 +565,24 @@ Test-Case 'startup and background preferences persist and default safely' {
     try {
         Set-Item Function:\Set-StartupRegistration -Value $requestStartupSetter
         Set-AppPreferences -Theme 'dark' -DateFormat 'dd/MM/yyyy' -CodePrefix 'TSK' -UserName '' -MaxBackups 30 -Language 'en' -OpenOnStartup $false -HideOnClose $true
-        Assert-True (-not $script:State.Settings.openOnStartup) 'avvio automatico ancora attivo'
-        Assert-True $script:State.Settings.hideOnClose 'nascondi alla chiusura non salvato'
+        Assert-True (-not $script:State.Settings.openOnStartup) 'automatic startup still enabled'
+        Assert-True $script:State.Settings.hideOnClose 'hide on close not saved'
         Assert-Eq $script:StartupRequests.Count 1
-        Assert-True (-not $script:StartupRequests[0]) 'disattivazione avvio non propagata a Windows'
+        Assert-True (-not $script:StartupRequests[0]) 'startup disable not propagated to Windows'
         Set-AppPreferences -Theme 'dark' -DateFormat 'dd/MM/yyyy' -CodePrefix 'TSK' -UserName '' -MaxBackups 30 -Language 'en' -OpenOnStartup $false -HideOnClose $true
-        Assert-Eq $script:StartupRequests.Count 1 'salvataggio invariato ha riscritto la registrazione di startup'
+        Assert-Eq $script:StartupRequests.Count 1 'unchanged save rewrote the startup registration'
         $st = Reload-AppState
-        Assert-True (-not $st.Settings.openOnStartup) 'avvio automatico non persistito'
-        Assert-True $st.Settings.hideOnClose 'nascondi alla chiusura non persistito'
+        Assert-True (-not $st.Settings.openOnStartup) 'automatic startup not persisted'
+        Assert-True $st.Settings.hideOnClose 'hide on close not persisted'
         Set-AppPreferences -Theme 'dark' -DateFormat 'dd/MM/yyyy' -CodePrefix 'TSK' -UserName '' -MaxBackups 30 -Language 'en' -OpenOnStartup $false -HideOnClose $false
         $st = Reload-AppState
-        Assert-True (-not $st.Settings.openOnStartup) 'avvio disattivato non persiste dopo il reload'
-        Assert-True (-not $st.Settings.hideOnClose) 'background disattivato non persiste dopo il reload'
+        Assert-True (-not $st.Settings.openOnStartup) 'disabled startup does not persist after reload'
+        Assert-True (-not $st.Settings.hideOnClose) 'disabled background does not persist after reload'
         $savedSettings = Read-JsonStrict (Get-DataFilePath 'settings.json')
-        Assert-True (-not $savedSettings.openOnStartup -and -not $savedSettings.hideOnClose) 'preferenze disattivate non salvate nel JSON'
+        Assert-True (-not $savedSettings.openOnStartup -and -not $savedSettings.hideOnClose) 'disabled preferences not saved in JSON'
         Set-AppPreferences -Theme 'dark' -DateFormat 'dd/MM/yyyy' -CodePrefix 'TSK' -UserName '' -MaxBackups 30 -Language 'en' -OpenOnStartup $true -HideOnClose $true
         Assert-Eq $script:StartupRequests.Count 2
-        Assert-True $script:StartupRequests[1] 'attivazione avvio non propagata a Windows'
+        Assert-True $script:StartupRequests[1] 'startup activation not propagated to Windows'
         Set-Item Function:\Set-StartupRegistration -Value { param([bool]$Enabled) throw 'startup registration failed' }
         $registrationFailed = $false
         try {
@@ -622,11 +612,11 @@ Test-Case 'legacy settings without language migrate to English default names' {
     Set-Content (Join-Path $tmp 'settings.json') $raw
     $st = Reload-AppState
     Assert-Eq (Get-StatusById 'todo').name 'To do'; Assert-Eq (Get-PriorityById 'low').name 'Low'
-    Assert-True $st.Settings.openOnStartup 'avvio automatico legacy non default true'
-    Assert-True $st.Settings.hideOnClose 'preferenza legacy false non migrata al nuovo default'
+    Assert-True $st.Settings.openOnStartup 'legacy automatic startup not default true'
+    Assert-True $st.Settings.hideOnClose 'legacy false preference not migrated to the new default'
     Assert-Eq $st.Settings.preferencesVersion 2
     $saved = Read-JsonStrict (Join-Path $tmp 'settings.json')
-    Assert-True $saved.hideOnClose 'preferenza migrata non salvata su disco'
+    Assert-True $saved.hideOnClose 'migrated preference not saved to disk'
 }
 Test-Case 'every visible text in the XAML files has an Italian translation' {
     $miss = @()
@@ -653,5 +643,5 @@ Test-Case 'every T ''...'' text used in the PowerShell code has an Italian trans
 Set-Language 'en'
 
 Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
-Write-Host ("`nRisultato: {0} superati, {1} falliti" -f $script:pass, $script:fail) -ForegroundColor $(if ($script:fail) { 'Red' } else { 'Green' })
+Write-Host ("`nResult: {0} passed, {1} failed" -f $script:pass, $script:fail) -ForegroundColor $(if ($script:fail) { 'Red' } else { 'Green' })
 exit $(if ($script:fail) { 1 } else { 0 })

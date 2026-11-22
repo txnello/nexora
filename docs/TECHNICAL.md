@@ -47,7 +47,7 @@ The launcher (`Build\Launcher\Program.cs`) is compiled with .NET Framework 4's `
   data-path.txt                        (chosen path, if different from the default)
   tasks.json  settings.json  history.json  (+ .bak)  Backups\  Logs\
 ```
-Startup and background options are saved immediately when a checkbox changes. Auto-start uses `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\NEXORA` in the traditional installer and the `windows.startupTask` extension with `Windows.ApplicationModel.StartupTask` in the MSIX package. In both cases the user can disable it from Task Manager. The background option uses `NotifyIcon` and cancels window closure when active (default); the tray icon menu lets the user restore or exit the app. Reopening NEXORA from the shortcut while it is already running sends a request to the active instance, which restores the hidden window instead of showing a warning. Windows session logoff and the *Exit* command terminate the process regardless.
+Startup and background options are saved immediately when a checkbox changes. Auto-start uses `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\NEXORA`. In both cases the user can disable it from Task Manager. The background option uses `NotifyIcon` and cancels window closure when active (default); the tray icon menu lets the user restore or exit the app. Reopening NEXORA from the shortcut while it is already running sends a request to the active instance, which restores the hidden window instead of showing a warning. Windows session logoff and the *Exit* command terminate the process regardless.
 Data path: `NEXORA_DATA` variable (test/IT) › path chosen by the user in `%LOCALAPPDATA%\Nexora\data-path.txt` › portable mode (`portable.flag` file next to the app → `.\Data`) › `%LOCALAPPDATA%\Nexora`.
 In normal use another folder can be chosen from *Settings → Backup and data*. The persistent selection is in `%LOCALAPPDATA%\Nexora\data-path.txt`, independent of the transferred files. For an empty destination, copying current data is preselected and the source is left intact. For a populated destination you can replace it (after saving a backup copy), switch to the data already there without copying the current data into it, or merge tasks, statuses, priorities, referents and history. During the merge the destination wins for scalar preferences and, in case of identical status/priority names, for their colors and values; entities with different names are kept.
 The selection is local to the Windows profile and does not coordinate multiple instances across different devices: use a synchronized folder only once synchronization is complete and with NEXORA closed on the other devices.
@@ -78,17 +78,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Build\Build-Nexora.ps1 -Cert
 ```
 Steps: logic tests → assets → `Nexora.exe` (icon, manifest, metadata) → package in `Build\out\stage` → `ISCC` (Inno Setup 6, `winget install JRSoftware.InnoSetup`) → `Release\` (`Nexora-Setup.exe`, `README.txt`, `LICENSE.txt`).
 
-### MSIX trial (separate and not yet Store-ready)
-```powershell
-winget install --id Microsoft.WindowsSDK.10.0.26100 --exact
-powershell -NoProfile -ExecutionPolicy Bypass -File Build\Build-Nexora-MSIX.ps1
-```
-The flow reuses the build stage, creates a `runFullTrust` desktop MSIX and signs it with a temporary test certificate. The local public certificate is left next to the package; the temporary private key is removed. The default output is `Build\out\Nexora-MSIX-LocalTest.msix`: identity and publisher are local placeholders and cannot be published to the Store. For submission, set the exact values assigned by Partner Center and verify the certification requirements. The command requires MakeAppx and SignTool from the Windows SDK; it does not change `Release\Nexora-Setup.exe`.
-
-MSIX packaging does not change persistence: the app uses `%LOCALAPPDATA%\Nexora` by default and supports the user-chosen data folder. Before publishing, installation, update, uninstallation and data retention with the final MSIX identity must be verified. Microsoft signing of the Store package does not guarantee that a heuristic antivirus detection on the launcher is removed; the current Defender false positive remains to be verified.
-
-Local verification of 21/11/2026: 50 logic tests passed; MakeAppx created and reopened the package, and SignTool signed the MSIX with the temporary certificate. The installation attempt with `Add-AppxPackage` was rejected (`0x800B0109`, untrusted root). The certificate was removed from user stores, the package was not left installed, and the machine's trusted roots were not modified. Installation, launch from the package and the data lifecycle therefore remain unverified.
-
 Installer (`Build\Installer\Nexora.iss`): modern wizard with brand images, license to accept, folder choice, optional desktop shortcut, Start menu, per-user installation without administrator rights (or "all users" by choice), registration in *Installed apps*, closing the app if running, English/Italian languages. Interactive uninstallation: asks whether to delete data (default **No**); silent: keeps them (`/DELETEDATA=1` to delete). IT parameters: `/VERYSILENT /CURRENTUSER|/ALLUSERS`.
 
 ## 7. Code signing and antivirus — KNOWN LIMIT, TO BE RESOLVED BEFORE SALE
@@ -105,10 +94,9 @@ Temporary internal workarounds: Defender exclusion for the install folder (requi
 ## 8. Verification status (Windows 11 Enterprise 26200, Windows PowerShell 5.1)
 | Verification | Outcome |
 |---|---|
-| Logic tests (56) and real-UI tests with screenshots (96) | Passed (22/11/2026) |
+| Logic tests (55) and real-UI tests with screenshots (96) | Passed (22/11/2026) |
 | "Support NEXORA" button (sidebar + About), `DonateButton` style and IT texts | Partial — presence and rendering verified (UI smoke 96/96 + modal About test); Ko-fi page opening **not yet tested with a click** |
 | `Nexora.exe` launch with no console or technical windows, single process, no child process | Verified (process/window list) |
-| Local MSIX creation/reopening with MakeAppx and temporary SignTool signing | Verified; local installation was blocked by the untrusted self-signed chain |
 | NEXORA icon in title bar and taskbar, window title "NEXORA" | Verified (screenshot) |
 | Splash visible during load and closed when window is ready, without blocking | Verified (screenshot at 0.9 s; the app stays alive after close) |
 | Data in `%LOCALAPPDATA%\Nexora` (or `NEXORA_DATA`), nothing in the install folder | Verified |

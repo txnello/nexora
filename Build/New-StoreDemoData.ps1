@@ -20,10 +20,10 @@ $desktop = [Environment]::GetFolderPath('Desktop')
 $shortcutPath = Join-Path $desktop 'NEXORA - Store Demo.lnk'
 
 if (Test-Path -LiteralPath $DataPath) {
-    throw "La cartella demo esiste gia' e non verra' modificata: $DataPath. Scegli un'altra cartella con -DataPath."
+    throw "The demo folder already exists and will not be modified: $DataPath. Choose another folder with -DataPath."
 }
 if (Test-Path -LiteralPath $shortcutPath) {
-    throw "Il collegamento demo esiste gia' e non verra' sovrascritto: $shortcutPath."
+    throw "The demo shortcut already exists and will not be overwritten: $shortcutPath."
 }
 
 if (-not $AppExePath) {
@@ -41,7 +41,7 @@ if (-not $AppExePath) {
     if (Test-Path -LiteralPath $stagedExe) { $AppExePath = $stagedExe }
 }
 if (-not $AppExePath -or -not (Test-Path -LiteralPath $AppExePath -PathType Leaf)) {
-    throw 'Nexora.exe non trovato. Specificare il percorso con -AppExePath.'
+    throw 'Nexora.exe not found. Specify the path with -AppExePath.'
 }
 $AppExePath = (Resolve-Path -LiteralPath $AppExePath).Path
 
@@ -138,9 +138,9 @@ Save-Settings
 Save-Tasks
 Save-History
 
-if (@($state.Tasks).Count -ne $definitions.Count) { throw 'Numero di task demo inatteso.' }
+if (@($state.Tasks).Count -ne $definitions.Count) { throw 'Unexpected number of demo tasks.' }
 $savedTasks = Read-JsonStrict -Path (Get-DataFilePath 'tasks.json')
-if (@($savedTasks.tasks).Count -ne $definitions.Count) { throw 'Verifica del file tasks.json non riuscita.' }
+if (@($savedTasks.tasks).Count -ne $definitions.Count) { throw 'tasks.json verification failed.' }
 
 $shell = New-Object -ComObject WScript.Shell
 $shortcut = $shell.CreateShortcut($shortcutPath)
@@ -151,19 +151,19 @@ $shortcut.Description = 'NEXORA demo data for Microsoft Store screenshots'
 $shortcut.IconLocation = "$AppExePath,0"
 $shortcut.Save()
 
-Write-Host "Dati demo creati: $DataPath" -ForegroundColor Green
-Write-Host ("Task: {0} ({1} aperti, {2} completati)" -f $state.Tasks.Count,
+Write-Host "Demo data created: $DataPath" -ForegroundColor Green
+Write-Host ("Tasks: {0} ({1} open, {2} completed)" -f $state.Tasks.Count,
     @($state.Tasks | Where-Object { -not (Test-StatusClosed $_.statusId $state.Settings.statuses) }).Count,
     @($state.Tasks | Where-Object { Test-StatusClosed $_.statusId $state.Settings.statuses }).Count)
-Write-Host "Collegamento dedicato: $shortcutPath"
-Write-Host 'I dati normali in %LOCALAPPDATA%\Nexora non sono stati modificati.'
+Write-Host "Dedicated shortcut: $shortcutPath"
+Write-Host 'The normal data in %LOCALAPPDATA%\Nexora was not modified.'
 
 if (-not $SkipLaunch) {
     $running = Get-Process -Name 'Nexora' -ErrorAction SilentlyContinue
     if ($running) {
-        Write-Warning 'NEXORA e'' gia'' in esecuzione. Chiudila e usa il collegamento desktop "NEXORA - Store Demo".'
+        Write-Warning 'NEXORA is already running. Close it and use the desktop shortcut "NEXORA - Store Demo".'
     } else {
         Start-Process -FilePath $AppExePath -ArgumentList ('-DataPath "' + $DataPath + '"') | Out-Null
-        Write-Host 'NEXORA e'' stata avviata con i dati demo.'
+        Write-Host 'NEXORA was started with the demo data.'
     }
 }

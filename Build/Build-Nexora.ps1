@@ -39,7 +39,7 @@ function Step([string]$m) { Write-Host "`n== $m" -ForegroundColor Cyan }
 $signCert = $null
 if ($CertThumbprint) {
     $signCert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Thumbprint -eq $CertThumbprint } | Select-Object -First 1
-    if (-not $signCert) { throw "Certificato $CertThumbprint non trovato in Cert:\CurrentUser\My" }
+    if (-not $signCert) { throw "Certificate $CertThumbprint not found in Cert:\CurrentUser\My" }
 } elseif ($PfxPath) {
     $signCert = New-Object System.Security.Cryptography.X509Certificates.X509Certificate2($PfxPath, $PfxPassword)
 }
@@ -48,45 +48,45 @@ function Sign-File([string]$path) {
     $args2 = @{ FilePath = $path; Certificate = $signCert; HashAlgorithm = 'SHA256' }
     if ($TimestampUrl) { $args2.TimestampServer = $TimestampUrl }
     $r = Set-AuthenticodeSignature @args2
-    if (-not $r.SignerCertificate) { throw "Firma non applicata a $path ($($r.StatusMessage))" }
-    Write-Host ("Firmato: {0}  [{1}]" -f (Split-Path $path -Leaf), $r.Status)
+    if (-not $r.SignerCertificate) { throw "Signature not applied to $path ($($r.StatusMessage))" }
+    Write-Host ("Signed: {0}  [{1}]" -f (Split-Path $path -Leaf), $r.Status)
 }
 if (-not $signCert) {
-    Write-Host 'ATTENZIONE: build NON firmata. Windows Defender/SmartScreen possono bloccare Nexora.exe e l''installer (vedi docs\TECHNICAL.md, "Firma digitale").' -ForegroundColor Yellow
+    Write-Host 'WARNING: build is NOT signed. Windows Defender/SmartScreen may block Nexora.exe and the installer (see docs\TECHNICAL.md, "Code signing").' -ForegroundColor Yellow
 }
 
 # ---------------------------------------------------------------- version
 $version = ([IO.File]::ReadAllText((Join-Path $root 'VERSION'))).Trim()
-if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "VERSION non valida: '$version' (formato richiesto Major.Minor.Patch)" }
+if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Invalid VERSION: '$version' (required format Major.Minor.Patch)" }
 Write-Host "NEXORA $version" -ForegroundColor Green
 
 # ---------------------------------------------------------------- 1. tests
 if (-not $SkipTests) {
-    Step 'Test della logica'
+    Step 'Logic tests'
     & $ps51 -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'Tests\Run-Tests.ps1')
-    if ($LASTEXITCODE -ne 0) { throw 'Test falliti: build interrotta.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Tests failed: build aborted.' }
 }
 
 # ---------------------------------------------------------------- 2. asset
 $brand = Join-Path $root 'Assets\Branding'
 $required = 'nexora-logo.svg', 'nexora-logo.png', 'nexora-logo-white.png', 'nexora-symbol.svg', 'nexora-symbol.png', 'nexora-icon.ico', 'nexora-icon.png', 'nexora-splash.png'
 if ($RegenerateBranding -or ($required | Where-Object { -not (Test-Path (Join-Path $brand $_)) })) {
-    Step 'Generazione asset del brand'
+    Step 'Brand asset generation'
     & $ps51 -NoProfile -STA -ExecutionPolicy Bypass -File (Join-Path $build 'New-Branding.ps1')
-    if ($LASTEXITCODE -ne 0) { throw 'Generazione asset fallita.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Asset generation failed.' }
 }
-foreach ($f in $required) { if (-not (Test-Path (Join-Path $brand $f))) { throw "Asset mancante: $f" } }
+foreach ($f in $required) { if (-not (Test-Path (Join-Path $brand $f))) { throw "Missing asset: $f" } }
 
 # ---------------------------------------------------------------- 3. Nexora.exe
-Step 'Compilazione di Nexora.exe'
+Step 'Compiling Nexora.exe'
 if (Test-Path $out) { Remove-Item -LiteralPath $out -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $stage | Out-Null
 $csc = Join-Path $env:SystemRoot 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if (-not (Test-Path $csc)) { $csc = Join-Path $env:SystemRoot 'Microsoft.NET\Framework\v4.0.30319\csc.exe' }
-if (-not (Test-Path $csc)) { throw 'csc.exe (.NET Framework 4) non trovato.' }
+if (-not (Test-Path $csc)) { throw 'csc.exe (.NET Framework 4) not found.' }
 $sma = Get-ChildItem (Join-Path $env:SystemRoot 'Microsoft.NET\assembly\GAC_MSIL\System.Management.Automation') -Recurse -Filter 'System.Management.Automation.dll' |
     Where-Object { $_.FullName -match 'v4\.0_3\.0\.0\.0' } | Select-Object -First 1
-if (-not $sma) { throw 'System.Management.Automation (Windows PowerShell 5.1) non trovato.' }
+if (-not $sma) { throw 'System.Management.Automation (Windows PowerShell 5.1) not found.' }
 $fileVersion = "$version.0"
 $year = (Get-Date).Year
 $asm = Join-Path $out 'AssemblyInfo.g.cs'
@@ -107,12 +107,12 @@ $cscArgs = @('/nologo', '/target:winexe', '/platform:anycpu', '/optimize+', "/ou
     "/reference:$($sma.FullName)", '/reference:System.Windows.Forms.dll', '/reference:System.Drawing.dll',
     (Join-Path $build 'Launcher\Program.cs'), (Join-Path $root 'src\UI\Native.cs'), $asm)
 & $csc @cscArgs
-if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exe)) { throw 'Compilazione di Nexora.exe fallita.' }
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exe)) { throw 'Nexora.exe compilation failed.' }
 Sign-File $exe
-Write-Host ("Nexora.exe: {0:N0} byte, versione file {1}" -f (Get-Item $exe).Length, (Get-Item $exe).VersionInfo.FileVersion)
+Write-Host ("Nexora.exe: {0:N0} bytes, file version {1}" -f (Get-Item $exe).Length, (Get-Item $exe).VersionInfo.FileVersion)
 
 # ---------------------------------------------------------------- 4. package
-Step 'Preparazione del pacchetto'
+Step 'Preparing the package'
 $app = Join-Path $stage 'app'
 New-Item -ItemType Directory -Force -Path $app | Out-Null
 Copy-Item -LiteralPath (Join-Path $root 'Start-Nexora.ps1') -Destination $app
@@ -122,31 +122,31 @@ New-Item -ItemType Directory -Force -Path (Join-Path $app 'Assets') | Out-Null
 Copy-Item -LiteralPath $brand -Destination (Join-Path $app 'Assets\Branding') -Recurse
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE.txt') -Destination $stage
 Copy-Item -LiteralPath (Join-Path $build 'Installer\README.txt') -Destination $stage
-Write-Host ("Pacchetto: {0} file, {1:N1} MB" -f (Get-ChildItem $stage -Recurse -File).Count, ((Get-ChildItem $stage -Recurse -File | Measure-Object Length -Sum).Sum / 1MB))
+Write-Host ("Package: {0} files, {1:N1} MB" -f (Get-ChildItem $stage -Recurse -File).Count, ((Get-ChildItem $stage -Recurse -File | Measure-Object Length -Sum).Sum / 1MB))
 
-if ($SkipInstaller) { Write-Host "`nInstaller saltato (-SkipInstaller). Pacchetto in $stage" -ForegroundColor Yellow; return }
+if ($SkipInstaller) { Write-Host "`nInstaller skipped (-SkipInstaller). Package in $stage" -ForegroundColor Yellow; return }
 
 # ---------------------------------------------------------------- 5. installer
-Step 'Compilazione dell''installer (Inno Setup)'
+Step 'Compiling the installer (Inno Setup)'
 $iscc = @(
     (Get-Command ISCC.exe -ErrorAction SilentlyContinue | ForEach-Object { $_.Source }),
     (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
     (Join-Path $env:ProgramFiles 'Inno Setup 6\ISCC.exe'),
     (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe')
 ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
-if (-not $iscc) { throw 'Inno Setup 6 non trovato. Installalo con:  winget install JRSoftware.InnoSetup' }
+if (-not $iscc) { throw 'Inno Setup 6 not found. Install it with:  winget install JRSoftware.InnoSetup' }
 New-Item -ItemType Directory -Force -Path $release | Out-Null
 Get-ChildItem $release -File -ErrorAction SilentlyContinue | Remove-Item -Force
 & $iscc "/DAppVersion=$version" "/DStageDir=$stage" "/DRepoRoot=$root" "/DOutDir=$release" (Join-Path $build 'Installer\Nexora.iss')
-if ($LASTEXITCODE -ne 0) { throw 'Compilazione dell''installer fallita.' }
+if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }
 
 # ---------------------------------------------------------------- 6. Release
-Step 'Cartella Release'
+Step 'Release folder'
 Copy-Item -LiteralPath (Join-Path $build 'Installer\README.txt') -Destination $release
 Copy-Item -LiteralPath (Join-Path $root 'LICENSE.txt') -Destination $release
 $setup = Join-Path $release 'Nexora-Setup.exe'
-if (-not (Test-Path $setup)) { throw 'Nexora-Setup.exe non generato.' }
+if (-not (Test-Path $setup)) { throw 'Nexora-Setup.exe was not generated.' }
 Sign-File $setup
 Get-ChildItem $release | ForEach-Object { '{0,-20} {1,12:N0} byte' -f $_.Name, $_.Length }
 Write-Host ("SHA-256 Nexora-Setup.exe: {0}" -f (Get-FileHash $setup -Algorithm SHA256).Hash)
-Write-Host "`nBuild completata: NEXORA $version" -ForegroundColor Green
+Write-Host "`nBuild completed: NEXORA $version" -ForegroundColor Green
