@@ -1,0 +1,27 @@
+# NEXORA - generated output and non-source files
+
+# Build artifacts (regenerable with Build\Build-Nexora.ps1)
+/Build/out/
+
+# Release output (installer + docs produced by the build)
+/Release/
+
+# Legacy/runtime data and logs (copied to %LOCALAPPDATA%\Nexora at first launch)
+/Data/
+
+# Internal handoff notes for agents/developers
+/HANDOFF.md
+
+# Kilo local config/state (agent tooling, not needed by end users)
+/.kilo/
+
+# Logs and backup files
+*.log
+*.bak
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vs/
+*.user

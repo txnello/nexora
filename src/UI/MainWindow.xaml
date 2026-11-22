@@ -1,0 +1,526 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="NEXORA" Width="1450" Height="820" MinWidth="780" MinHeight="540"
+        WindowStartupLocation="CenterScreen" SnapsToDevicePixels="True">
+  <Grid>
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition x:Name="colSide" Width="236"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <!-- ===================== Sidebar ===================== -->
+      <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,1,0">
+        <DockPanel Margin="12,18,12,14">
+          <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="8,0,0,22">
+            <Image x:Name="imgLogo" Source="{StaticResource NexoraSymbol}" Width="38" Height="38" RenderOptions.BitmapScalingMode="HighQuality"/>
+            <TextBlock x:Name="txtBrand" Text="NEXORA" FontFamily="Bahnschrift SemiBold, Segoe UI Semibold" FontSize="17" VerticalAlignment="Center" Margin="10,0,0,0"/>
+          </StackPanel>
+
+          <StackPanel DockPanel.Dock="Bottom">
+            <Button x:Name="btnDonate" Style="{StaticResource DonateButton}" ToolTip="Support NEXORA with a donation" Margin="0,0,0,6">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#x2665;" FontSize="14" Width="26" TextAlignment="Center" VerticalAlignment="Center" Foreground="#FF6B9D"/>
+                <TextBlock x:Name="lblDonate" Text="Support NEXORA" VerticalAlignment="Center" Margin="8,0,0,0"/>
+              </StackPanel>
+            </Button>
+            <Button x:Name="btnAbout" Style="{StaticResource GhostButton}" HorizontalContentAlignment="Left" ToolTip="About NEXORA">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="26" TextAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock x:Name="lblAbout" Text="About NEXORA" VerticalAlignment="Center" Margin="8,0,0,0"/>
+              </StackPanel>
+            </Button>
+            <Button x:Name="btnTheme" Style="{StaticResource GhostButton}" HorizontalContentAlignment="Left" ToolTip="Switch theme (light/dark)">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE793;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="26" TextAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock x:Name="lblTheme" Text="Light theme" VerticalAlignment="Center" Margin="8,0,0,0"/>
+              </StackPanel>
+            </Button>
+          </StackPanel>
+
+          <StackPanel>
+            <RadioButton x:Name="navDashboard" Style="{StaticResource NavButton}" GroupName="nav" IsChecked="True" ToolTip="Dashboard">
+              <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE80F;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="26" TextAlignment="Center" VerticalAlignment="Center"/><TextBlock x:Name="lblDashboard" Text="Dashboard" VerticalAlignment="Center" Margin="8,0,0,0"/></StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="navAll" Style="{StaticResource NavButton}" GroupName="nav" ToolTip="All tasks">
+              <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8FD;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="26" TextAlignment="Center" VerticalAlignment="Center"/><TextBlock x:Name="lblAll" Text="All tasks" VerticalAlignment="Center" Margin="8,0,0,0"/></StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="navMine" Style="{StaticResource NavButton}" GroupName="nav" ToolTip="My tasks">
+              <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE77B;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="26" TextAlignment="Center" VerticalAlignment="Center"/><TextBlock x:Name="lblMine" Text="My tasks" VerticalAlignment="Center" Margin="8,0,0,0"/></StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="navByRef" Style="{StaticResource NavButton}" GroupName="nav" ToolTip="By owner">
+              <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE716;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="26" TextAlignment="Center" VerticalAlignment="Center"/><TextBlock x:Name="lblByRef" Text="By owner" VerticalAlignment="Center" Margin="8,0,0,0"/></StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="navDone" Style="{StaticResource NavButton}" GroupName="nav" ToolTip="Completed">
+              <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE930;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="26" TextAlignment="Center" VerticalAlignment="Center"/><TextBlock x:Name="lblDone" Text="Completed" VerticalAlignment="Center" Margin="8,0,0,0"/></StackPanel>
+            </RadioButton>
+            <Separator Margin="0,10"/>
+            <RadioButton x:Name="navSettings" Style="{StaticResource NavButton}" GroupName="nav" ToolTip="Settings">
+              <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE713;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="26" TextAlignment="Center" VerticalAlignment="Center"/><TextBlock x:Name="lblSettings" Text="Settings" VerticalAlignment="Center" Margin="8,0,0,0"/></StackPanel>
+            </RadioButton>
+          </StackPanel>
+        </DockPanel>
+      </Border>
+
+      <!-- ===================== Content ===================== -->
+      <Grid Grid.Column="1" Margin="28,22,28,16">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,16">
+          <Button x:Name="btnNew" DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" VerticalAlignment="Center" ToolTip="New task (Ctrl+N)">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE710;" FontFamily="{StaticResource IconFont}" Margin="0,1,8,0" VerticalAlignment="Center"/><TextBlock Text="New task"/></StackPanel>
+          </Button>
+          <StackPanel>
+            <TextBlock x:Name="txtTitle" Text="Dashboard" FontSize="26" FontWeight="SemiBold"/>
+            <TextBlock x:Name="txtSubtitle" Style="{StaticResource Muted}" Margin="1,2,0,0" Text=""/>
+          </StackPanel>
+        </DockPanel>
+
+        <!-- Statistics (dashboard only) -->
+        <UniformGrid x:Name="statsPanel" Grid.Row="1" Columns="4" Margin="0,0,0,18">
+          <Button x:Name="cardOpen" Style="{StaticResource CardButton}" Margin="0,0,6,0" ToolTip="Show all open tasks">
+            <Grid>
+              <StackPanel>
+                <TextBlock Text="Open tasks" Style="{StaticResource Muted}"/>
+                <TextBlock x:Name="txtOpen" Text="0" FontSize="30" FontWeight="SemiBold" Margin="0,4,0,0"/>
+              </StackPanel>
+              <TextBlock Text="&#xE8FD;" FontFamily="{StaticResource IconFont}" FontSize="18" Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+            </Grid>
+          </Button>
+          <Button x:Name="cardUrgent" Style="{StaticResource CardButton}" Margin="6,0,6,0" ToolTip="Show urgent tasks only">
+            <Grid>
+              <StackPanel>
+                <TextBlock Text="Urgent" Style="{StaticResource Muted}"/>
+                <TextBlock x:Name="txtUrgent" Text="0" FontSize="30" FontWeight="SemiBold" Margin="0,4,0,0"/>
+              </StackPanel>
+              <TextBlock Text="&#xE7C1;" FontFamily="{StaticResource IconFont}" FontSize="18" Foreground="{DynamicResource WarnBrush}" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+            </Grid>
+          </Button>
+          <Button x:Name="cardOverdue" Style="{StaticResource CardButton}" Margin="6,0,6,0" ToolTip="Show overdue tasks only">
+            <Grid>
+              <StackPanel>
+                <TextBlock Text="Overdue" Style="{StaticResource Muted}"/>
+                <TextBlock x:Name="txtOverdue" Text="0" FontSize="30" FontWeight="SemiBold" Margin="0,4,0,0"/>
+              </StackPanel>
+              <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource IconFont}" FontSize="18" Foreground="{DynamicResource DangerBrush}" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+            </Grid>
+          </Button>
+          <Button x:Name="cardDone" Style="{StaticResource CardButton}" Margin="6,0,0,0" ToolTip="Go to completed tasks">
+            <Grid>
+              <StackPanel>
+                <TextBlock Text="Completed" Style="{StaticResource Muted}"/>
+                <TextBlock x:Name="txtDone" Text="0" FontSize="30" FontWeight="SemiBold" Margin="0,4,0,0"/>
+              </StackPanel>
+              <TextBlock Text="&#xE930;" FontFamily="{StaticResource IconFont}" FontSize="18" Foreground="{DynamicResource OkBrush}" HorizontalAlignment="Right" VerticalAlignment="Top"/>
+            </Grid>
+          </Button>
+        </UniformGrid>
+
+        <!-- Filters and actions -->
+        <WrapPanel x:Name="filterPanel" Grid.Row="2" Margin="0,0,0,12">
+          <Grid Width="260" Margin="0,0,10,8">
+            <TextBox x:Name="txtSearch" Padding="34,8,10,8" ToolTip="Search by code, title or owner (Ctrl+F)"/>
+            <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource MutedBrush}" Margin="12,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+            <TextBlock x:Name="searchHint" Text="Search code, title, owner…" Style="{StaticResource Muted}" Margin="34,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+          </Grid>
+          <ComboBox x:Name="cmbStatus" Width="160" Margin="0,0,10,8" ItemTemplate="{StaticResource NameTemplate}" ToolTip="Filter by status"/>
+          <ComboBox x:Name="cmbPriority" Width="150" Margin="0,0,10,8" ItemTemplate="{StaticResource NameTemplate}" ToolTip="Filter by priority"/>
+          <ComboBox x:Name="cmbReferent" Width="170" Margin="0,0,10,8" ItemTemplate="{StaticResource NameTemplate}" ToolTip="Filter by owner"/>
+          <Button x:Name="btnClear" Style="{StaticResource GhostButton}" Margin="0,0,16,8" ToolTip="Clear all filters">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="Clear"/></StackPanel>
+          </Button>
+          <Button x:Name="btnEdit" Margin="0,0,8,8" ToolTip="Open / edit the selected task (Enter)">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE70F;" FontFamily="{StaticResource IconFont}" Margin="0,1,7,0" VerticalAlignment="Center"/><TextBlock Text="Open"/></StackPanel>
+          </Button>
+          <Button x:Name="btnReminder" Margin="0,0,8,8" ToolTip="Log a reminder on the selected task">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7ED;" FontFamily="{StaticResource IconFont}" Margin="0,1,7,0" VerticalAlignment="Center"/><TextBlock Text="Reminder"/></StackPanel>
+          </Button>
+          <Button x:Name="btnDuplicate" Margin="0,0,8,8" ToolTip="Duplicate the selected task">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8C8;" FontFamily="{StaticResource IconFont}" Margin="0,1,7,0" VerticalAlignment="Center"/><TextBlock Text="Duplicate"/></StackPanel>
+          </Button>
+          <Button x:Name="btnDelete" Margin="0,0,0,8" ToolTip="Delete the selected task (Del)">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE74D;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource DangerBrush}" Margin="0,1,7,0" VerticalAlignment="Center"/><TextBlock Text="Delete"/></StackPanel>
+          </Button>
+        </WrapPanel>
+
+        <!-- Tasks table -->
+        <Border x:Name="tableCard" Grid.Row="3" Style="{StaticResource Card}" Padding="0" ClipToBounds="True">
+          <Grid>
+            <DockPanel>
+              <TextBlock x:Name="txtInfo" DockPanel.Dock="Top" Visibility="Collapsed" Padding="16,12" TextWrapping="Wrap"
+                         Background="{DynamicResource SelectBrush}"/>
+              <DataGrid x:Name="grid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
+                        SelectionMode="Single" CanUserResizeRows="False" CanUserReorderColumns="True" RowHeaderWidth="0"
+                        EnableRowVirtualization="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                <DataGrid.GroupStyle>
+                  <GroupStyle>
+                    <GroupStyle.HeaderTemplate>
+                      <DataTemplate>
+                        <Border Background="{DynamicResource Surface2Brush}" Padding="16,8" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1">
+                          <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE77B;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource AccentBrush}" Margin="0,2,8,0"/>
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding ItemCount, StringFormat=' · {0}'}" Style="{StaticResource Muted}"/>
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </GroupStyle.HeaderTemplate>
+                  </GroupStyle>
+                </DataGrid.GroupStyle>
+                <DataGrid.Columns>
+                  <DataGridTemplateColumn x:Name="colBulk" Header="" Width="42" MinWidth="42" CanUserSort="False" IsReadOnly="False">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <CheckBox IsChecked="{Binding BulkSelected, Mode=OneWay}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                ToolTip="Select task for bulk actions"
+                                Command="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=Tag}"
+                                CommandParameter="{Binding RelativeSource={RelativeSource Self}}"/>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn x:Name="colCode" Header="CODE" Width="100" MinWidth="100" SortMemberPath="Code">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <TextBlock Text="{Binding Code}" Foreground="{DynamicResource MutedBrush}" FontFamily="Cascadia Mono, Consolas" FontSize="12.5"/>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn x:Name="colTitle" Header="TITLE" Width="*" MinWidth="180" SortMemberPath="Title">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <StackPanel VerticalAlignment="Center" Margin="0,4">
+                        <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" ToolTip="{Binding Description}"/>
+                        <TextBlock Text="{Binding Snippet}" FontSize="11.5" TextTrimming="CharacterEllipsis">
+                          <TextBlock.Resources>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Muted}">
+                              <Style.Triggers><DataTrigger Binding="{Binding Snippet}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
+                            </Style>
+                          </TextBlock.Resources>
+                        </TextBlock>
+                      </StackPanel>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn x:Name="colReferent" Header="OWNER" Width="130" MinWidth="110" SortMemberPath="Referent">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <TextBlock Text="{Binding Referent}" TextTrimming="CharacterEllipsis"/>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn x:Name="colStatus" Header="STATUS" Width="148" MinWidth="148" SortMemberPath="StatusOrder">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <Border Background="{Binding StatusBg}" CornerRadius="11" Padding="10,3" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal">
+                          <Ellipse Width="7" Height="7" Fill="{Binding StatusColor}" Margin="0,1,7,0"/>
+                          <TextBlock Text="{Binding StatusName}" Foreground="{Binding StatusColor}" FontWeight="SemiBold" FontSize="12"/>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn x:Name="colPriority" Header="PRIORITY" Width="104" MinWidth="104" SortMemberPath="PriorityValue">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <Border Background="{Binding PriorityBg}" CornerRadius="11" Padding="10,3" HorizontalAlignment="Left">
+                        <TextBlock Text="{Binding PriorityName}" Foreground="{Binding PriorityColor}" FontWeight="SemiBold" FontSize="12"/>
+                      </Border>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn x:Name="colDue" Header="DUE DATE" Width="132" MinWidth="132" SortMemberPath="DueSort">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <StackPanel VerticalAlignment="Center">
+                        <StackPanel.Resources>
+                          <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                            <Style.Triggers><DataTrigger Binding="{Binding IsOverdue}" Value="True"><Setter Property="Foreground" Value="{DynamicResource DangerBrush}"/></DataTrigger></Style.Triggers>
+                          </Style>
+                        </StackPanel.Resources>
+                        <TextBlock Text="{Binding DueText}"/>
+                        <TextBlock Text="{Binding DueHint}" FontSize="11.5" Opacity="0.75"/>
+                      </StackPanel>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn x:Name="colReminders" Header="REMINDERS" Width="88" MinWidth="88" SortMemberPath="Reminders">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <TextBlock Text="{Binding ReminderText}" ToolTip="{Binding ReminderTip}" Style="{StaticResource Muted}"/>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn x:Name="colScore" Header="SCORE" Width="112" MinWidth="112" SortMemberPath="ScoreValue">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <StackPanel VerticalAlignment="Center" Margin="0,0,6,0">
+                        <TextBlock Text="{Binding ScoreText}" FontWeight="Bold" Foreground="{Binding ScoreColor}"/>
+                        <ProgressBar Style="{StaticResource ThinBar}" Value="{Binding ScoreBar, Mode=OneWay}" Foreground="{Binding ScoreColor}" Margin="0,4,0,0"/>
+                      </StackPanel>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn x:Name="colLink" Header="LINK" Width="72" MinWidth="72" CanUserSort="False">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <Button Command="{Binding LinkCommand}" CommandParameter="{Binding Link}"
+                              Padding="9,3" HorizontalAlignment="Left" ToolTip="Open link in browser">
+                        <Button.Style>
+                          <Style TargetType="Button" BasedOn="{StaticResource GhostButton}">
+                            <Setter Property="Padding" Value="9,3"/>
+                            <Setter Property="HorizontalAlignment" Value="Left"/>
+                            <Style.Triggers>
+                              <DataTrigger Binding="{Binding Link}" Value=""><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </Button.Style>
+                        <TextBlock Text="&#xE71B;" FontFamily="{StaticResource IconFont}"/>
+                      </Button>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                </DataGrid.Columns>
+              </DataGrid>
+            </DockPanel>
+
+            <!-- empty state -->
+            <StackPanel x:Name="emptyState" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="True">
+              <TextBlock x:Name="emptyIcon" Text="&#xE73A;" FontFamily="{StaticResource IconFont}" FontSize="40" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" Opacity="0.6"/>
+              <TextBlock x:Name="emptyTitle" Text="No tasks" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,12,0,4"/>
+              <TextBlock x:Name="emptyText" Style="{StaticResource Muted}" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="360"/>
+              <Button x:Name="btnEmptyNew" Style="{StaticResource PrimaryButton}" Content="Create your first task" HorizontalAlignment="Center" Margin="0,16,0,0"/>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- ===================== Settings ===================== -->
+        <ScrollViewer x:Name="settingsView" Grid.Row="1" Grid.RowSpan="3" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Margin="0,0,-12,0">
+          <StackPanel MaxWidth="1000" HorizontalAlignment="Left" Margin="0,0,12,24">
+
+            <!-- Statuses -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                  <TextBlock Text="Statuses" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12"
+                             Text="Create, edit, reorder or delete statuses. «Closed» statuses exclude a task from the priority ranking."/>
+                  <ListBox x:Name="lstStatuses" Height="220">
+                    <ListBox.ItemTemplate><DataTemplate>
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Ellipse Width="11" Height="11" Fill="{Binding color}" Margin="0,0,12,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding name}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding kind}" Style="{StaticResource Muted}" FontSize="12"/>
+                      </Grid>
+                    </DataTemplate></ListBox.ItemTemplate>
+                  </ListBox>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Bottom" Width="120">
+                  <Button x:Name="btnStAdd" Content="New status" Style="{StaticResource PrimaryButton}" Margin="0,0,0,6"/>
+                  <Button x:Name="btnStEdit" Content="Edit" Margin="0,0,0,6"/>
+                  <Button x:Name="btnStDel" Content="Delete" Margin="0,0,0,6"/>
+                  <UniformGrid Columns="2">
+                    <Button x:Name="btnStUp" Margin="0,0,3,0" ToolTip="Move up"><TextBlock Text="&#xE70E;" FontFamily="{StaticResource IconFont}"/></Button>
+                    <Button x:Name="btnStDown" Margin="3,0,0,0" ToolTip="Move down"><TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}"/></Button>
+                  </UniformGrid>
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <!-- Priorities -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                  <TextBlock Text="Priority levels" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12"
+                             Text="Name and numeric value: the lowest value counts as 0 and the highest as 100 in the score calculation."/>
+                  <ListBox x:Name="lstPriorities" Height="170">
+                    <ListBox.ItemTemplate><DataTemplate>
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Ellipse Width="11" Height="11" Fill="{Binding color}" Margin="0,0,12,0"/>
+                        <TextBlock Grid.Column="1" Text="{Binding name}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding kind}" Style="{StaticResource Muted}" FontSize="12"/>
+                      </Grid>
+                    </DataTemplate></ListBox.ItemTemplate>
+                  </ListBox>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Bottom" Width="120">
+                  <Button x:Name="btnPrAdd" Content="New level" Style="{StaticResource PrimaryButton}" Margin="0,0,0,6"/>
+                  <Button x:Name="btnPrEdit" Content="Edit" Margin="0,0,0,6"/>
+                  <Button x:Name="btnPrDel" Content="Delete"/>
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <!-- Owners -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                  <TextBlock Text="Owners" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12"
+                             Text="Create, edit, reorder or delete the people responsible for tasks."/>
+                  <ListBox x:Name="lstReferents" Height="170">
+                    <ListBox.ItemTemplate><DataTemplate>
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE77B;" FontFamily="{StaticResource IconFont}" Margin="0,0,12,0" Opacity="0.75"/>
+                        <TextBlock Grid.Column="1" Text="{Binding name}"/>
+                      </Grid>
+                    </DataTemplate></ListBox.ItemTemplate>
+                  </ListBox>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Bottom" Width="120">
+                  <Button x:Name="btnRfAdd" Content="New owner" Style="{StaticResource PrimaryButton}" Margin="0,0,0,6"/>
+                  <Button x:Name="btnRfEdit" Content="Edit" Margin="0,0,0,6"/>
+                  <Button x:Name="btnRfDel" Content="Delete" Margin="0,0,0,6"/>
+                  <UniformGrid Columns="2">
+                    <Button x:Name="btnRfUp" Margin="0,0,3,0" ToolTip="Move up"><TextBlock Text="&#xE70E;" FontFamily="{StaticResource IconFont}"/></Button>
+                    <Button x:Name="btnRfDown" Margin="3,0,0,0" ToolTip="Move down"><TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}"/></Button>
+                  </UniformGrid>
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <!-- Engine -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+              <StackPanel>
+                <TextBlock Text="Prioritization engine" Style="{StaticResource SectionTitle}"/>
+                <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,14"
+                           Text="Score = Priority × weight + Due date × weight + Reminders × weight + Age × weight. Moving a slider rebalances the others: the total always stays 100%."/>
+                <Grid>
+                  <Grid.ColumnDefinitions><ColumnDefinition Width="160"/><ColumnDefinition Width="*"/><ColumnDefinition Width="56"/></Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/></Grid.RowDefinitions>
+                  <TextBlock Text="Manual priority" VerticalAlignment="Center"/>
+                  <Slider x:Name="sldPriority" Grid.Column="1" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,5"/>
+                  <TextBlock x:Name="valPriority" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                  <TextBlock Grid.Row="1" Text="Due date proximity" VerticalAlignment="Center"/>
+                  <Slider x:Name="sldDeadline" Grid.Row="1" Grid.Column="1" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,5"/>
+                  <TextBlock x:Name="valDeadline" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                  <TextBlock Grid.Row="2" Text="Reminders received" VerticalAlignment="Center"/>
+                  <Slider x:Name="sldReminders" Grid.Row="2" Grid.Column="1" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,5"/>
+                  <TextBlock x:Name="valReminders" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                  <TextBlock Grid.Row="3" Text="Task age" VerticalAlignment="Center"/>
+                  <Slider x:Name="sldAge" Grid.Row="3" Grid.Column="1" TickFrequency="1" IsSnapToTickEnabled="True" Margin="0,5"/>
+                  <TextBlock x:Name="valAge" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                </Grid>
+                <TextBlock x:Name="txtWeightSum" Style="{StaticResource Muted}" Margin="0,8,0,16" Text="Total: 100%"/>
+
+                <WrapPanel>
+                  <StackPanel Margin="0,0,20,14" Width="300">
+                    <TextBlock Text="Due date score when missing *" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="txtNoDue" ToolTip="Neutral value (0-100) for tasks without a due date"/>
+                    <TextBlock Style="{StaticResource Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="2,6,0,0" Text="How much the due date counts for tasks that don&#x27;t have one (0-100). With 40 they are neither penalized nor pushed up; with 0 they drop in the ranking, with 100 they rise as if they were due."/>
+                  </StackPanel>
+                  <StackPanel Margin="0,0,20,14" Width="300">
+                    <TextBlock Text="Age cap (days) *" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="txtAgeCap" ToolTip="Beyond this age the age factor stops growing"/>
+                    <TextBlock Style="{StaticResource Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="2,6,0,0" Text="After how many open days the age factor reaches its maximum and stops growing. Example: with 90, a task open for 45 days scores 50/100, one open for 200 days scores 100/100."/>
+                  </StackPanel>
+                  <StackPanel Margin="0,0,20,14" Width="300">
+                    <TextBlock Text="«Urgent» threshold (score) *" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="txtUrgent2" ToolTip="An open task with a score ≥ threshold is considered urgent"/>
+                    <TextBlock Style="{StaticResource Muted}" FontSize="11.5" TextWrapping="Wrap" Margin="2,6,0,0" Text="Score (1-100) from which an open task is highlighted in amber and counted among the dashboard&#x27;s «Urgent» tasks. With 70 only tasks very high in the ranking are urgent. Tasks with the highest priority level are always urgent too."/>
+                  </StackPanel>
+                </WrapPanel>
+                <TextBlock x:Name="txtParamsError" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" Margin="2,0,0,10" Visibility="Collapsed"/>
+                <StackPanel Orientation="Horizontal">
+                  <Button x:Name="btnParamsSave" Content="Apply parameters" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0"/>
+                  <Button x:Name="btnWeightsReset" Content="Restore defaults"/>
+                </StackPanel>
+              </StackPanel>
+            </Border>
+
+            <!-- Preferences -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+              <StackPanel>
+                <TextBlock Text="Appearance and preferences" Style="{StaticResource SectionTitle}"/>
+                <WrapPanel Margin="0,10,0,0">
+                  <StackPanel Margin="0,0,20,12" Width="200">
+                    <TextBlock Text="Language *" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox x:Name="cmbLanguage" ItemTemplate="{StaticResource NameTemplate}"/>
+                  </StackPanel>
+                  <StackPanel Margin="0,0,20,12" Width="200">
+                    <TextBlock Text="Theme *" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox x:Name="cmbTheme" ItemTemplate="{StaticResource NameTemplate}"/>
+                  </StackPanel>
+                  <StackPanel Margin="0,0,20,12" Width="200">
+                    <TextBlock Text="Date format *" Style="{StaticResource FieldLabel}"/>
+                    <ComboBox x:Name="cmbDateFormat" ItemTemplate="{StaticResource NameTemplate}"/>
+                  </StackPanel>
+                  <StackPanel Margin="0,0,20,12" Width="200">
+                    <TextBlock Text="Task code prefix *" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="txtPrefix" MaxLength="10" ToolTip="E.g. DEV generates DEV-1001, DEV-1002…"/>
+                  </StackPanel>
+                  <StackPanel Margin="0,0,20,12" Width="200">
+                    <TextBlock Text="My name (for «My tasks»)" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="txtUserName" MaxLength="80"/>
+                  </StackPanel>
+                  <StackPanel Margin="0,0,20,12" Width="200">
+                    <TextBlock Text="Automatic backups to keep *" Style="{StaticResource FieldLabel}"/>
+                    <TextBox x:Name="txtMaxBackups" MaxLength="3"/>
+                  </StackPanel>
+                </WrapPanel>
+                <TextBlock x:Name="txtPrefError" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" Margin="2,0,0,10" Visibility="Collapsed"/>
+                <Button x:Name="btnPrefSave" Content="Save preferences" Style="{StaticResource PrimaryButton}" HorizontalAlignment="Left"/>
+                <Button x:Name="btnWebsiteSettings" Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Padding="0" Margin="0,8,0,0">
+                  <TextBlock Text="Developed by Manuel Tonello · txnello.com" TextDecorations="Underline" Foreground="{DynamicResource AccentBrush}"/>
+                </Button>
+              </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+              <StackPanel>
+                <TextBlock Text="Startup and background" Style="{StaticResource SectionTitle}"/>
+                <CheckBox x:Name="chkOpenOnStartup" Content="Open NEXORA automatically when I sign in to Windows" Margin="2,12,0,0"/>
+                <TextBlock Style="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="28,4,0,10"
+                           Text="NEXORA appears in Windows Startup apps and can also be disabled from Task Manager."/>
+                <CheckBox x:Name="chkHideOnClose" Content="Hide to the notification area when I close the window" Margin="2,4,0,0"/>
+                <TextBlock Style="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="28,4,0,0"
+                           Text="NEXORA keeps running in the background. Use its notification-area icon to open or exit."/>
+                <TextBlock Style="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="28,8,0,0"
+                           Text="These settings are saved immediately."/>
+              </StackPanel>
+            </Border>
+
+            <!-- Backups -->
+            <Border Style="{StaticResource Card}">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                  <TextBlock Text="Backups and data" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock x:Name="txtDataPath" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                  <CheckBox x:Name="chkMoveData" Content="Copy current data to a new empty folder (keep the original as a safety copy)"
+                            IsChecked="True" Margin="0,0,0,12" />
+                  <TextBlock Style="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"
+                             Text="Cloud sync does not coordinate simultaneous edits. Close NEXORA on other devices before using this folder."/>
+                  <ListBox x:Name="lstBackups" Height="200">
+                    <ListBox.ItemTemplate><DataTemplate>
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding when}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding reason}" Style="{StaticResource Muted}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding size}" Style="{StaticResource Muted}" FontSize="12"/>
+                      </Grid>
+                    </DataTemplate></ListBox.ItemTemplate>
+                  </ListBox>
+                  <TextBlock Style="{StaticResource Muted}" FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"
+                             Text="An automatic backup is created every day and before delicate operations (deletions, imports). Manual backups are never deleted."/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Bottom" Width="170">
+                  <Button x:Name="btnBkNow" Content="Create backup now" Style="{StaticResource PrimaryButton}" Margin="0,0,0,6"/>
+                  <Button x:Name="btnBkRestore" Content="Restore selected" Margin="0,0,0,6"/>
+                  <Button x:Name="btnBkExport" Content="Export backup…" Margin="0,0,0,6"/>
+                  <Button x:Name="btnBkImport" Content="Import backup…" Margin="0,0,0,6"/>
+                  <Button x:Name="btnChangeDataFolder" Content="Change data folder…" Margin="0,0,0,6"/>
+                  <Button x:Name="btnBkOpen" Content="Open data folder" Style="{StaticResource GhostButton}"/>
+                </StackPanel>
+              </Grid>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+
+    <!-- Temporary notification -->
+    <Border x:Name="toast" Visibility="Collapsed" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,28"
+            Background="{DynamicResource Surface2Brush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" CornerRadius="9" Padding="16,10">
+      <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="4" Opacity="0.4"/></Border.Effect>
+      <StackPanel Orientation="Horizontal">
+        <TextBlock x:Name="toastIcon" Text="&#xE73E;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource OkBrush}" Margin="0,2,10,0"/>
+        <TextBlock x:Name="toastText" MaxWidth="560" TextWrapping="Wrap"/>
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>

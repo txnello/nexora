@@ -1,0 +1,18 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Data folder contains existing data" Width="560" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <StackPanel Margin="24,22,24,20">
+    <TextBlock x:Name="folderChoiceTitle" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
+    <TextBlock x:Name="folderChoiceText" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,8,0,8"/>
+    <TextBlock x:Name="folderChoicePath" TextWrapping="Wrap" Margin="0,0,0,16" FontWeight="SemiBold"/>
+    <Button x:Name="folderChoiceOverwrite" Content="Change and overwrite" Style="{StaticResource DangerButton}"
+            HorizontalContentAlignment="Left" Margin="0,0,0,8" MinHeight="42"/>
+    <Button x:Name="folderChoiceKeep" Content="Change without overwriting"
+            HorizontalContentAlignment="Left" Margin="0,0,0,8" MinHeight="42"/>
+    <Button x:Name="folderChoiceMerge" Content="Merge"
+            HorizontalContentAlignment="Left" Margin="0,0,0,8" MinHeight="42"/>
+    <Button x:Name="folderChoiceCancel" Content="Cancel" IsCancel="True"
+            HorizontalContentAlignment="Left" Margin="0,4,0,0" MinHeight="42"/>
+  </StackPanel>
+</Window>

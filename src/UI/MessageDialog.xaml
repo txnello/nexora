@@ -1,0 +1,18 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="NEXORA" Width="460" SizeToContent="Height" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+  <StackPanel Margin="24,22,24,20">
+    <StackPanel Orientation="Horizontal">
+      <TextBlock x:Name="msgIcon" Text="&#xE946;" FontFamily="{StaticResource IconFont}" FontSize="22" Foreground="{DynamicResource AccentBrush}" Margin="0,2,14,0" VerticalAlignment="Top"/>
+      <StackPanel>
+        <TextBlock x:Name="msgTitle" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="340"/>
+        <TextBlock x:Name="msgText" Style="{StaticResource Muted}" TextWrapping="Wrap" MaxWidth="340" Margin="0,8,0,0"/>
+      </StackPanel>
+    </StackPanel>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+      <Button x:Name="msgNo" Content="Cancel" MinWidth="90" Margin="0,0,8,0"/>
+      <Button x:Name="msgYes" Content="OK" Style="{StaticResource PrimaryButton}" MinWidth="100"/>
+    </StackPanel>
+  </StackPanel>
+</Window>
