@@ -51,7 +51,7 @@ Donations are entirely optional. NEXORA remains free whether or not you donate.
 
 ## License
 
-NEXORA is freeware, not open-source software. The source code is not included in this repository. The installer is provided under the [NEXORA End User License Agreement](LICENSE.txt); redistribution or resale of the software is not permitted.
+The installer and code are provided under the [NEXORA End User License Agreement](LICENSE.txt); redistribution or resale of the software is not permitted.
 
 ---
 
@@ -106,4 +106,4 @@ Le donazioni sono del tutto facoltative. NEXORA resta gratuita anche senza donar
 
 ## Licenza
 
-NEXORA è freeware, non software open source. Il codice sorgente non è incluso in questa repo. L’installer è fornito secondo il [contratto di licenza per l’utente finale di NEXORA](LICENSE.txt); la ridistribuzione e la rivendita del software non sono consentite.
+L’installer e il codice sono forniti secondo il [contratto di licenza per l’utente finale di NEXORA](LICENSE.txt); la ridistribuzione e la rivendita del software non sono consentite.
