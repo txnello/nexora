@@ -304,6 +304,23 @@ $steps.Enqueue({
 $steps.Enqueue({
     ShotWin $script:dlg '05-new-task-dark'
     $n = $script:Td.N
+    # the due-date calendar must be large enough to read comfortably (it used to be the tiny default size)
+    $n.calPopup.IsOpen = $true; $n.calendar.UpdateLayout()
+    ShotWin $n.calendar.Parent '05c-calendar-dark'   # the popup card (dark background) around the calendar
+    Check 'calendario scadenza: abbastanza grande da leggere' ($n.calendar.ActualWidth -ge 265 -and $n.calendar.ActualHeight -ge 275) "dimensioni=$([int]$n.calendar.ActualWidth)x$([int]$n.calendar.ActualHeight)"
+    # picking a day still fills the due-date field (and closes the popup)
+    $pickDate = (Get-Date).Date.AddDays(3)
+    $n.calendar.SelectedDate = $pickDate
+    Check 'calendario scadenza: la data scelta riempie il campo e chiude il popup' ($n.txtDue.Text -eq (Format-AppDate $pickDate $script:State.Settings) -and -not $n.calPopup.IsOpen) $n.txtDue.Text
+    $n.txtDue.Text = ''
+    # month/year picker (opened by clicking the calendar header) uses the restyled month buttons
+    $n.calPopup.IsOpen = $true; $n.calendar.DisplayMode = 'Year'; $n.calendar.UpdateLayout()
+    ShotWin $n.calendar.Parent '05d-calendar-months-dark'
+    $calItem = Find-VisualChild $n.calendar ([System.Windows.Controls.Primitives.CalendarItem])
+    $mv = $calItem.Template.FindName('PART_MonthView', $calItem); $yv = $calItem.Template.FindName('PART_YearView', $calItem)
+    Check 'calendario scadenza: vista dei mesi leggibile' ($n.calendar.ActualWidth -ge 240 -and $n.calendar.ActualHeight -ge 200 -and $yv.Visibility -eq 'Visible' -and $mv.Visibility -ne 'Visible' -and $yv.Children.Count -ge 12) "mode=$($n.calendar.DisplayMode) month=$($mv.Visibility)/$($mv.Children.Count) year=$($yv.Visibility)/$($yv.Children.Count)"
+    $n.calendar.DisplayMode = 'Month'
+    $n.calPopup.IsOpen = $false
     $n.txtTitle.Text = ''
     Save-TaskDialog
     $script:Td.W.UpdateLayout()
@@ -524,6 +541,9 @@ $steps.Enqueue({
 })
 $steps.Enqueue({
     ShotWin $script:dlg '10-task-dialog-light'
+    $script:Td.N.calPopup.IsOpen = $true; $script:Td.N.calendar.UpdateLayout()
+    ShotWin $script:Td.N.calendar.Parent '10c-calendar-light'
+    $script:Td.N.calPopup.IsOpen = $false
     $script:Td.W.Close()
     $w.Width = 900; $w.Height = 700
 })
