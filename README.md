@@ -13,14 +13,10 @@ NEXORA is a free Windows desktop app for organizing tasks and seeing what needs 
 To build the installer from this repository and install NEXORA:
 
 1. Download the project from GitHub (**Code → Download ZIP**) and extract it.
-2. Install Inno Setup 6, required to build the installer:
-   ```powershell
-   winget install JRSoftware.InnoSetup
-   ```
-3. Run `Build\UpdateInstaller.bat` and approve the administrator prompt. The script runs the tests, compiles `Nexora.exe` and generates `Release\Nexora-Setup.exe`.
-4. Run `Release\Nexora-Setup.exe` and follow the setup wizard.
+2. Run `Build\UpdateInstaller.bat` and approve the administrator prompt. The script does everything for you: it installs Inno Setup 6 via `winget` if it is missing, runs the tests, compiles `Nexora.exe`, generates `Release\Nexora-Setup.exe` and launches it.
+3. Follow the setup wizard.
 
-NEXORA supports Windows 10 and Windows 11. To update, repeat the steps from the updated source and run the new installer.
+NEXORA supports Windows 10 and Windows 11. To update, repeat the steps from the updated source and run `Build\UpdateInstaller.bat` again.
 
 ## Why NEXORA?
 
@@ -68,14 +64,10 @@ NEXORA è un’applicazione desktop gratuita per Windows che aiuta a organizzare
 Per compilare l’installer da questa repository e installare NEXORA:
 
 1. Scarica il progetto da GitHub (**Code → Download ZIP**) ed estrailo.
-2. Installa Inno Setup 6, necessario per compilare l’installer:
-   ```powershell
-   winget install JRSoftware.InnoSetup
-   ```
-3. Esegui `Build\UpdateInstaller.bat` e conferma la richiesta di privilegi amministratore. Lo script esegue i test, compila `Nexora.exe` e genera `Release\Nexora-Setup.exe`.
-4. Esegui `Release\Nexora-Setup.exe` e segui la procedura guidata.
+2. Esegui `Build\UpdateInstaller.bat` e conferma la richiesta di privilegi amministratore. Lo script fa tutto da solo: installa Inno Setup 6 tramite `winget` se manca, esegue i test, compila `Nexora.exe`, genera `Release\Nexora-Setup.exe` e lo avvia.
+3. Segui la procedura guidata.
 
-NEXORA supporta Windows 10 e Windows 11. Per aggiornare, ripeti i passaggi dalla sorgente aggiornata e avvia il nuovo installer.
+NEXORA supporta Windows 10 e Windows 11. Per aggiornare, ripeti i passaggi dalla sorgente aggiornata ed esegui di nuovo `Build\UpdateInstaller.bat`.
 
 ## Perché NEXORA?
 
