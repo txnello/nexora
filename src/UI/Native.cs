@@ -16,6 +16,7 @@ public class TaskRow
     public object LinkCommand { get; set; }
     public string Referent { get; set; }
     public string Project { get; set; }
+    public string Client { get; set; }
     public string Group { get; set; }
     public string StatusName { get; set; }
     public string StatusColor { get; set; }

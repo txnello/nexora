@@ -119,7 +119,7 @@ $w.Height = 820
 $u = $script:Ui
 $steps = New-Object System.Collections.Generic.Queue[scriptblock]
 $steps.Enqueue({
-    Check 'larghezza iniziale include la colonna di selezione' ($defaultWindowWidth -eq 1520) "larghezza=$defaultWindowWidth"
+    Check 'larghezza iniziale include la colonna di selezione' ($defaultWindowWidth -eq 1560) "larghezza=$defaultWindowWidth"
     $rows = @($u.grid.ItemsSource)
     Check 'dashboard: solo task aperti' ($rows.Count -eq 7) "righe=$($rows.Count)"
     $scores = @($u.grid.Items | ForEach-Object { $_.ScoreValue })
@@ -335,6 +335,11 @@ $steps.Enqueue({
     Queue-ItemDialogSave 'Progetto creato dal task'
     $n.cmbProject.SelectedIndex = $n.cmbProject.Items.Count - 1
     Check 'creazione progetto dal menu del task' ($n.cmbProject.SelectedItem.value -eq 'Progetto creato dal task' -and $n.txtTitle.Text -eq 'Task creato dal test UI') $n.cmbProject.SelectedItem.name
+    Check 'cliente: (nessun cliente) disponibile e preselezionato' ($null -ne ($n.cmbClient.Items | Where-Object { -not $_.IsCreateAction -and $_.value -eq '' }) -and $n.cmbClient.SelectedItem.value -eq '')
+    Check 'cliente non modificabile in linea' (-not $n.cmbClient.IsEditable)
+    Queue-ItemDialogSave 'Cliente creato dal task'
+    $n.cmbClient.SelectedIndex = $n.cmbClient.Items.Count - 1
+    Check 'creazione cliente dal menu del task' ($n.cmbClient.SelectedItem.value -eq 'Cliente creato dal task' -and $n.txtTitle.Text -eq 'Task creato dal test UI' -and $n.cmbProject.SelectedItem.value -eq 'Progetto creato dal task') $n.cmbClient.SelectedItem.name
     $n.txtDue.Text = (Get-Date).ToString('dd/MM/yyyy')
     Save-TaskDialog
 })
@@ -344,6 +349,22 @@ $steps.Enqueue({
     Check 'nuovo task dal dialogo' ($null -ne $createdTask)
     Check 'referente selezionato salvato nel task' ($createdTask.referent -eq 'Referente creato dal task') $createdTask.referent
     Check 'progetto selezionato salvato nel task' ($createdTask.project -eq 'Progetto creato dal task') $createdTask.project
+    Check 'cliente selezionato salvato nel task' ($createdTask.client -eq 'Cliente creato dal task') $createdTask.client
+    Check 'altri task restano senza cliente' (@($script:State.Tasks | Where-Object { -not $_.client }).Count -eq ($script:State.Tasks.Count - 1))
+    $clientRow = $u.grid.Items | Where-Object { $_.Id -eq $createdTask.id } | Select-Object -First 1
+    Check 'riga mostra il cliente' ($clientRow.Client -eq 'Cliente creato dal task') $clientRow.Client
+    Check 'filtro clienti: tutte le voci + il cliente creato' ($u.cmbClient.Items.Count -eq 2 -and $u.cmbClient.Items[1].name -eq 'Cliente creato dal task')
+    $u.cmbClient.SelectedIndex = 1
+    Check 'filtro per cliente mostra solo i task del cliente' ($u.grid.Items.Count -eq 1 -and $u.grid.Items[0].Id -eq $createdTask.id) "righe=$($u.grid.Items.Count)"
+    $u.btnClear.RaiseEvent((New-Object System.Windows.RoutedEventArgs([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)))
+    Check 'Clear azzera anche il filtro cliente' ($u.cmbClient.SelectedIndex -eq 0 -and $u.grid.Items.Count -gt 1)
+    $u.txtSearch.Text = 'Cliente creato'
+    Check 'la ricerca trova anche per cliente' ($u.grid.Items.Count -eq 1) "righe=$($u.grid.Items.Count)"
+    $u.txtSearch.Text = ''
+    $u.navByClient.IsChecked = $true
+    Check 'vista Per cliente: raggruppata per cliente, icona negozio, colonna cliente nascosta' ($u.grid.Items.Groups.Count -eq 2 -and $u.grid.Tag -eq [string][char]0xE719 -and $u.grid.Columns[$script:ColClient].Visibility -eq 'Collapsed') "gruppi=$($u.grid.Items.Groups.Count)"
+    $clientGroupNames = @($u.grid.Items.Groups | ForEach-Object { $_.Name })
+    Check 'vista Per cliente: gruppo (senza cliente) e gruppo del cliente' ($clientGroupNames -contains 'Cliente creato dal task' -and $clientGroupNames -contains (T '(no client)')) ($clientGroupNames -join ', ')
     Check 'altri task restano senza progetto' (@($script:State.Tasks | Where-Object { -not $_.project }).Count -eq ($script:State.Tasks.Count - 1))
     $projRow = $u.grid.Items | Where-Object { $_.Id -eq $createdTask.id } | Select-Object -First 1
     $otherRow = $u.grid.Items | Where-Object { $_.Id -ne $createdTask.id } | Select-Object -First 1
@@ -389,6 +410,7 @@ $steps.Enqueue({
 })
 $steps.Enqueue({
     Shot '06-settings-dark'
+    Check 'Impostazioni: elenco clienti con il cliente creato' (@($u.lstClients.ItemsSource | Where-Object { $_.name -eq 'Cliente creato dal task' }).Count -eq 1)
     Check 'Impostazioni: elenco progetti con il progetto creato' (@($u.lstProjects.ItemsSource | Where-Object { $_.name -eq 'Progetto creato dal task' }).Count -eq 1)
     Check 'data-folder controls visible with copy enabled by default' ($u.chkMoveData.IsChecked -and $u.btnChangeDataFolder.Content -eq 'Change data folder…' -and $u.txtDataPath.Text -like '*tasks.json*')
     $folderChoice = Import-Xaml 'DataFolderChoiceDialog.xaml'

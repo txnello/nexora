@@ -368,6 +368,82 @@ Test-Case 'projects used by tasks but missing from settings are imported on load
     $st = Reload-AppState
     Assert-True ($null -ne ($st.Settings.projects | Where-Object { $_.name -ieq 'Orphan Project' })) 'progetto orfano non importato'
 }
+Write-Host 'Clients' -ForegroundColor Yellow
+Test-Case 'create, rename, reorder and validate clients' {
+    $c = Add-Client 'Acme'
+    Assert-True ($null -ne (Get-ClientById $c.id))
+    Update-Client $c.id 'Acme Corp'
+    Assert-Eq (Get-ClientById $c.id).name 'Acme Corp'
+    Assert-Throws { Add-Client 'acme corp' } 'nome cliente duplicato accettato'
+    Assert-Throws { Add-Client '   ' } 'nome cliente vuoto accettato'
+    Assert-Throws { Add-Client ('x' * 81) } 'nome cliente troppo lungo accettato'
+    $q = Add-Client 'Globex'
+    $before = $script:State.Settings.clients.IndexOf($q)
+    Move-Client $q.id -1
+    Assert-Eq $script:State.Settings.clients.IndexOf($q) ($before - 1)
+    # a client and a project may share a name: they are independent lists
+    $null = Add-Project 'Acme Corp'
+}
+Test-Case 'client and project are independent and both survive edit, status change, duplicate and reload' {
+    $in = New-In 'CLI-1' 'con cliente e progetto'; $in.Client = 'Initech'; $in.Project = 'Migration'
+    $t = Add-AppTask $in
+    Assert-Eq (Get-TaskById $t.id).client 'Initech'; Assert-Eq (Get-TaskById $t.id).project 'Migration'
+    # input WITHOUT Client / Project keys must not wipe them
+    $null = Update-AppTask $t.id (New-In 'CLI-1' 'titolo cambiato')
+    Assert-Eq (Get-TaskById $t.id).client 'Initech' 'editing without Client key cleared the client'
+    Assert-Eq (Get-TaskById $t.id).project 'Migration' 'editing without Project key cleared the project'
+    $null = Set-AppTaskStatus $t.id 'doing'
+    Assert-Eq (Get-TaskById $t.id).client 'Initech' 'status change cleared the client'
+    $copy = Copy-AppTask $t.id
+    Assert-Eq $copy.client 'Initech' 'duplicate lost the client'; Assert-Eq $copy.project 'Migration' 'duplicate lost the project'
+    # changing only the client leaves the project alone, and the change is logged
+    $in2 = New-In 'CLI-1' 'titolo cambiato'; $in2.Client = ''; $in2.Project = 'Migration'
+    $null = Update-AppTask $t.id $in2
+    Assert-Eq (Get-TaskById $t.id).client ''; Assert-Eq (Get-TaskById $t.id).project 'Migration'
+    Assert-True ($script:State.History | Where-Object { $_.taskId -eq $t.id -and $_.text -like '*Initech*' }) 'client change not logged'
+    $in3 = New-In 'CLI-1' 'titolo cambiato'; $in3.Client = 'Initech'; $in3.Project = 'Migration'
+    $null = Update-AppTask $t.id $in3
+    $st = Reload-AppState
+    Assert-Eq (Get-TaskById $t.id).client 'Initech' 'client lost after reload from disk'
+    Assert-True ((Get-Content (Join-Path $tmp 'tasks.json') -Raw) -match '"client"\s*:\s*"Initech"') 'client not written to tasks.json'
+    Assert-True ($null -ne ($st.Settings.clients | Where-Object { $_.name -eq 'Initech' })) 'client not persisted in settings.json'
+}
+Test-Case 'renaming a client updates its tasks; deleting it keeps the tasks and clears only the client' {
+    $c = Add-Client 'Temp Client'
+    $in = New-In 'CLI-2' 'task del cliente'; $in.Client = 'Temp Client'; $in.Project = 'Keep Me'
+    $t = Add-AppTask $in
+    $count = $script:State.Tasks.Count
+    Update-Client $c.id 'Temp Renamed'
+    Assert-Eq (Get-TaskById $t.id).client 'Temp Renamed'
+    $removed = Remove-Client $c.id
+    Assert-Eq $removed.Moved 1
+    Assert-Eq $script:State.Tasks.Count $count 'deleting a client deleted tasks'
+    Assert-Eq (Get-TaskById $t.id).client '' 'task not moved to no client'
+    Assert-Eq (Get-TaskById $t.id).project 'Keep Me' 'deleting a client touched the project'
+    Assert-True ($null -eq (Get-ClientById $c.id))
+}
+Test-Case 'clients used by tasks but missing from settings are imported on load' {
+    $in = New-In 'CLI-3' 'cliente orfano'; $in.Client = 'Orphan Client'
+    $null = Add-AppTask $in
+    $script:State.Settings.clients = ConvertTo-List @()
+    Save-Settings
+    $st = Reload-AppState
+    Assert-True ($null -ne ($st.Settings.clients | Where-Object { $_.name -ieq 'Orphan Client' })) 'cliente orfano non importato'
+}
+Test-Case 'files with projects but without clients (project-only version) load as "no client" and stay intact' {
+    $d = Join-Path $tmp 'compat-projects-only'; New-Item -ItemType Directory -Force $d | Out-Null
+    Set-Content (Join-Path $d 'settings.json') '{"version":1,"referents":[],"projects":[{"id":"pj1","name":"Alpha"}],"language":"en","codePrefix":"TSK","nextCodeNumber":1002}'
+    Set-Content (Join-Path $d 'tasks.json') '{"version":1,"tasks":[{"id":"b1","code":"TSK-1001","title":"Solo progetto","description":"","referent":"","project":"Alpha","link":"","statusId":"todo","priorityId":"medium","createdAt":"2026-01-01T10:00:00","updatedAt":"2026-01-01T10:00:00","dueDate":null,"reminders":0,"lastReminderAt":null,"completedAt":null}]}'
+    try {
+        Initialize-Storage -DataPath $d
+        $st = Initialize-AppState
+        Assert-Eq $st.Warnings.Count 0
+        Assert-Eq ([string]$st.Tasks[0].client) '' 'task without client must be "no client"'
+        Assert-Eq $st.Tasks[0].project 'Alpha' 'project lost'
+        Assert-Eq $st.Settings.clients.Count 0
+        Assert-Eq $st.Settings.projects.Count 1
+    } finally { Initialize-Storage -DataPath $tmp; $null = Initialize-AppState }
+}
 Test-Case 'files written by 1.0.4 (no project / projects keys) load as "no project" and stay intact' {
     $d = Join-Path $tmp 'compat104'; New-Item -ItemType Directory -Force $d | Out-Null
     $oldSettings = '{"version":1,"referents":[{"id":"rf1","name":"Ann"}],"statuses":[{"id":"todo","name":"To do","color":"#6B7280","isClosed":false},{"id":"done","name":"Done","color":"#10B981","isClosed":true}],"priorities":[{"id":"high","name":"High","value":3,"color":"#F97316"}],"language":"it","theme":"light","dateFormat":"dd/MM/yyyy","codePrefix":"DEV","nextCodeNumber":1002,"userName":"Ann","maxBackups":30,"openOnStartup":true,"hideOnClose":true,"preferencesVersion":2}'
@@ -382,6 +458,9 @@ Test-Case 'files written by 1.0.4 (no project / projects keys) load as "no proje
         Assert-Eq ([string]$st.Tasks[0].project) '' 'task without project must be "no project"'
         Assert-Eq $st.Settings.projects.Count 0 'no projects expected in a 1.0.4 config'
         Assert-Eq @(Get-Projects).Count 0
+        Assert-Eq ([string]$st.Tasks[0].client) '' 'task without client must be "no client"'
+        Assert-Eq $st.Settings.clients.Count 0 'no clients expected in a 1.0.4 config'
+        Assert-Eq @(Get-Clients).Count 0
         Assert-Eq $st.Tasks[0].title 'Vecchio task'; Assert-Eq $st.Tasks[0].reminders 2; Assert-Eq $st.Tasks[0].referent 'Ann'
         Assert-Eq $st.Settings.userName 'Ann'; Assert-Eq $st.Settings.language 'it'; Assert-Eq $st.Settings.codePrefix 'DEV'
         Assert-Eq $st.Settings.referents.Count 1
@@ -546,9 +625,10 @@ Test-Case 'data folder switch protects existing data, copies current data, and p
         $script:State.Settings.priorities.Add([pscustomobject]@{ id = 'shared-priority'; name = 'Priority B'; value = 5; color = '#3B82F6' })
         $script:State.Settings.referents.Add([pscustomobject]@{ id = 'shared-owner'; name = 'Owner B' })
         $script:State.Settings.projects.Add([pscustomobject]@{ id = 'shared-project'; name = 'Project B' })
+        $script:State.Settings.clients.Add([pscustomobject]@{ id = 'shared-client'; name = 'Client B' })
         Save-Settings
         $targetMergeTask = Add-AppTask (New-In 'MERGE-COLLISION' 'Task B' $null 'shared-priority' 'shared-status' 'Owner B')
-        $targetMergeTask.project = 'Project B'
+        $targetMergeTask.project = 'Project B'; $targetMergeTask.client = 'Client B'
         $targetMergeTaskOldId = $targetMergeTask.id
         $targetMergeTask.id = 'shared-task-id'
         foreach ($entry in $script:State.History | Where-Object taskId -eq $targetMergeTaskOldId) { $entry.taskId = 'shared-task-id' }
@@ -560,11 +640,12 @@ Test-Case 'data folder switch protects existing data, copies current data, and p
         $script:State.Settings.priorities.Add([pscustomobject]@{ id = 'shared-priority'; name = 'Priority A'; value = 6; color = '#10B981' })
         $script:State.Settings.referents.Add([pscustomobject]@{ id = 'shared-owner'; name = 'Owner A' })
         $script:State.Settings.projects.Add([pscustomobject]@{ id = 'shared-project'; name = 'Project A' })
+        $script:State.Settings.clients.Add([pscustomobject]@{ id = 'shared-client'; name = 'Client A' })
         $script:State.Settings.language = 'it'
         Convert-DefaultNames $script:State.Settings 'it'
         Save-Settings
         $sourceMergeTask = Add-AppTask (New-In 'MERGE-COLLISION' 'Task A' $null 'shared-priority' 'shared-status' 'Owner A')
-        $sourceMergeTask.project = 'Project A'
+        $sourceMergeTask.project = 'Project A'; $sourceMergeTask.client = 'Client A'
         $sourceMergeTaskOldId = $sourceMergeTask.id
         $sourceMergeTask.id = 'shared-task-id'
         foreach ($entry in $script:State.History | Where-Object taskId -eq $sourceMergeTaskOldId) { $entry.taskId = 'shared-task-id' }
@@ -588,6 +669,10 @@ Test-Case 'data folder switch protects existing data, copies current data, and p
         Assert-True ($script:State.Settings.referents | Where-Object name -eq 'Owner B') 'destination owner missing after merge'
         Assert-True ($script:State.Settings.projects | Where-Object name -eq 'Project A') 'source project missing after merge'
         Assert-True ($script:State.Settings.projects | Where-Object name -eq 'Project B') 'destination project missing after merge'
+        Assert-True ($script:State.Settings.clients | Where-Object name -eq 'Client A') 'source client missing after merge'
+        Assert-True ($script:State.Settings.clients | Where-Object name -eq 'Client B') 'destination client missing after merge'
+        Assert-Eq $taskA.client 'Client A' 'source task client lost in merge'
+        Assert-Eq $taskB.client 'Client B' 'destination task client lost in merge'
         Assert-Eq $taskA.project 'Project A' 'source task project lost in merge'
         Assert-Eq $taskB.project 'Project B' 'destination task project lost in merge'
         Assert-True ($script:State.History | Where-Object { $_.taskId -eq $taskA.id }) 'source task history was not remapped'

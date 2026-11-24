@@ -40,16 +40,16 @@
         <Grid Margin="0,14,0,0">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <StackPanel>
-            <TextBlock Text="Project" Style="{StaticResource FieldLabel}"/>
-            <ComboBox x:Name="cmbProject" IsEditable="False">
+            <TextBlock Text="Client" Style="{StaticResource FieldLabel}"/>
+            <ComboBox x:Name="cmbClient" IsEditable="False">
               <ComboBox.ItemTemplate><DataTemplate>
                 <TextBlock Text="{Binding name}"/>
               </DataTemplate></ComboBox.ItemTemplate>
             </ComboBox>
           </StackPanel>
           <StackPanel Grid.Column="2">
-            <TextBlock Text="Owner" Style="{StaticResource FieldLabel}"/>
-            <ComboBox x:Name="cmbReferent" IsEditable="False">
+            <TextBlock Text="Project" Style="{StaticResource FieldLabel}"/>
+            <ComboBox x:Name="cmbProject" IsEditable="False">
               <ComboBox.ItemTemplate><DataTemplate>
                 <TextBlock Text="{Binding name}"/>
               </DataTemplate></ComboBox.ItemTemplate>
@@ -60,18 +60,16 @@
         <Grid Margin="0,14,0,0">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <StackPanel>
-            <TextBlock Text="Status *" Style="{StaticResource FieldLabel}"/>
-            <ComboBox x:Name="cmbStatus">
+            <TextBlock Text="Owner" Style="{StaticResource FieldLabel}"/>
+            <ComboBox x:Name="cmbReferent" IsEditable="False">
               <ComboBox.ItemTemplate><DataTemplate>
-                <StackPanel Orientation="Horizontal">
-                  <Ellipse Width="9" Height="9" Fill="{Binding color}" Margin="0,1,9,0"/><TextBlock Text="{Binding name}"/>
-                </StackPanel>
+                <TextBlock Text="{Binding name}"/>
               </DataTemplate></ComboBox.ItemTemplate>
             </ComboBox>
           </StackPanel>
           <StackPanel Grid.Column="2">
-            <TextBlock Text="Manual priority *" Style="{StaticResource FieldLabel}"/>
-            <ComboBox x:Name="cmbPriority">
+            <TextBlock Text="Status *" Style="{StaticResource FieldLabel}"/>
+            <ComboBox x:Name="cmbStatus">
               <ComboBox.ItemTemplate><DataTemplate>
                 <StackPanel Orientation="Horizontal">
                   <Ellipse Width="9" Height="9" Fill="{Binding color}" Margin="0,1,9,0"/><TextBlock Text="{Binding name}"/>
@@ -104,6 +102,16 @@
               <Button x:Name="btnWeek" Content="+7 days" Style="{StaticResource ChipButton}" Margin="0,0,6,0"/>
               <Button x:Name="btnNoDue" Content="None" Style="{StaticResource ChipButton}"/>
             </StackPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="2">
+            <TextBlock Text="Manual priority *" Style="{StaticResource FieldLabel}"/>
+            <ComboBox x:Name="cmbPriority">
+              <ComboBox.ItemTemplate><DataTemplate>
+                <StackPanel Orientation="Horizontal">
+                  <Ellipse Width="9" Height="9" Fill="{Binding color}" Margin="0,1,9,0"/><TextBlock Text="{Binding name}"/>
+                </StackPanel>
+              </DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
           </StackPanel>
         </Grid>
 

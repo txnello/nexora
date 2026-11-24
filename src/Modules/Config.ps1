@@ -32,6 +32,7 @@ function Get-DefaultSettings {
         version        = 1
         referents      = ConvertTo-List @()
         projects       = ConvertTo-List @()
+        clients        = ConvertTo-List @()
         statuses       = ConvertTo-List @(
             [pscustomobject]@{ id = 'todo';    name = 'To do';        color = '#6B7280'; isClosed = $false }
             [pscustomobject]@{ id = 'doing';   name = 'In progress'; color = '#3B82F6'; isClosed = $false }
@@ -121,6 +122,19 @@ function Repair-Settings {
         $projs.Add([pscustomobject]@{ id = $id; name = $name })
     }
     $d.projects = $projs
+
+    # configurable clients (optional: settings written by earlier versions have no 'clients' key -> empty list)
+    $clis = New-Object 'System.Collections.Generic.List[psobject]'
+    $seenClis = @{}
+    foreach ($c in @(Get-Prop $Raw 'clients' @())) {
+        $name = ([string](Get-Prop $c 'name' '')).Trim()
+        if ($name -eq '' -or $seenClis.ContainsKey($name.ToLowerInvariant())) { continue }
+        $seenClis[$name.ToLowerInvariant()] = $true
+        $id = [string](Get-Prop $c 'id' '')
+        if ($id -eq '') { $id = 'cl' + (New-Id).Substring(0, 8) }
+        $clis.Add([pscustomobject]@{ id = $id; name = $name })
+    }
+    $d.clients = $clis
 
     # statuses
     $st = New-Object 'System.Collections.Generic.List[psobject]'
@@ -228,6 +242,7 @@ function Get-StatusById { param($Id) $script:State.Settings.statuses | Where-Obj
 function Get-PriorityById { param($Id) $script:State.Settings.priorities | Where-Object { $_.id -eq $Id } | Select-Object -First 1 }
 function Get-ReferentById { param($Id) $script:State.Settings.referents | Where-Object { $_.id -eq $Id } | Select-Object -First 1 }
 function Get-ProjectById { param($Id) $script:State.Settings.projects | Where-Object { $_.id -eq $Id } | Select-Object -First 1 }
+function Get-ClientById { param($Id) $script:State.Settings.clients | Where-Object { $_.id -eq $Id } | Select-Object -First 1 }
 
 function Assert-ValidName {
     param([string]$Name, $List, [string]$ExceptId, [string]$Kind)
@@ -432,6 +447,68 @@ function Move-Project {
     $i = $projs.IndexOf($p); $j = $i + $Direction
     if ($j -lt 0 -or $j -ge $projs.Count) { return }
     $projs.RemoveAt($i); $projs.Insert($j, $p)
+    Save-Settings
+}
+
+# ------------------------------------------------------------------ Clients
+# Same model as projects: the list lives in settings.clients, tasks store the client NAME in task.client
+# (empty string = no client). Client and project are independent fields. Deleting a client never deletes tasks.
+
+function Assert-ValidClientName {
+    param([string]$Name, [string]$ExceptId = '')
+    $n = $Name.Trim()
+    if ($n.Length -eq 0) { throw (T 'The name is required.') }
+    if ($n.Length -gt 80) { throw (T 'The client cannot exceed 80 characters.') }
+    if ($script:State.Settings.clients | Where-Object { $_.id -ne $ExceptId -and $_.name -ieq $n }) {
+        throw (T 'A client named "{0}" already exists.' $n)
+    }
+}
+
+function Add-Client {
+    param([string]$Name)
+    Assert-ValidClientName $Name
+    $c = [pscustomobject]@{ id = 'cl' + (New-Id).Substring(0, 8); name = $Name.Trim() }
+    $script:State.Settings.clients.Add($c)
+    Save-Settings
+    return $c
+}
+
+function Update-Client {
+    param([string]$Id, [string]$Name)
+    $c = Get-ClientById $Id
+    if ($null -eq $c) { throw (T 'Client not found.') }
+    Assert-ValidClientName $Name $Id
+    $oldName = $c.name
+    $c.name = $Name.Trim()
+    foreach ($t in $script:State.Tasks) {
+        if ($t.client -ieq $oldName) { $t.client = $c.name }
+    }
+    Save-Settings; Save-Tasks
+}
+
+function Remove-Client {
+    param([string]$Id)
+    $clis = $script:State.Settings.clients
+    $c = Get-ClientById $Id
+    if ($null -eq $c) { throw (T 'Client not found.') }
+    New-Snapshot -Reason 'pre-delete-client' | Out-Null
+    $moved = 0
+    foreach ($t in $script:State.Tasks) {
+        if ($t.client -ieq $c.name) { $t.client = ''; $moved++ }
+    }
+    [void]$clis.Remove($c)
+    Save-Settings; Save-Tasks
+    return [pscustomobject]@{ Moved = $moved }
+}
+
+function Move-Client {
+    param([string]$Id, [int]$Direction)
+    $clis = $script:State.Settings.clients
+    $c = Get-ClientById $Id
+    if ($null -eq $c) { return }
+    $i = $clis.IndexOf($c); $j = $i + $Direction
+    if ($j -lt 0 -or $j -ge $clis.Count) { return }
+    $clis.RemoveAt($i); $clis.Insert($j, $c)
     Save-Settings
 }
 

@@ -227,11 +227,21 @@ function Get-MergedAppDataState {
         $targetSettings.projects.Add([pscustomobject]@{ id = $id; name = $item.name })
     }
 
+    $usedClientIds = @{}
+    foreach ($item in $targetSettings.clients) { $usedClientIds[[string]$item.id] = $true }
+    foreach ($item in $sourceSettings.clients) {
+        if ($targetSettings.clients | Where-Object { $_.name -ieq $item.name }) { continue }
+        $id = [string]$item.id
+        if ($usedClientIds.ContainsKey($id)) { $id = Get-MergeUniqueId $usedClientIds }
+        else { $usedClientIds[$id] = $true }
+        $targetSettings.clients.Add([pscustomobject]@{ id = $id; name = $item.name })
+    }
+
     $sourceRawTasks = New-Object 'System.Collections.Generic.List[psobject]'
     foreach ($task in $script:State.Tasks) {
         $sourceRawTasks.Add([pscustomobject]@{
             id = $task.id; code = $task.code; title = $task.title; description = $task.description
-            referent = $task.referent; project = $task.project; link = $task.link; statusId = $statusIds[[string]$task.statusId]
+            referent = $task.referent; project = $task.project; client = $task.client; link = $task.link; statusId = $statusIds[[string]$task.statusId]
             priorityId = $priorityIds[[string]$task.priorityId]; createdAt = $task.createdAt
             updatedAt = $task.updatedAt; dueDate = $task.dueDate; reminders = $task.reminders
             lastReminderAt = $task.lastReminderAt; completedAt = $task.completedAt
@@ -248,6 +258,11 @@ function Get-MergedAppDataState {
         $projectName = ([string]$task.project).Trim()
         if (-not $projectName -or ($targetSettings.projects | Where-Object { $_.name -ieq $projectName })) { continue }
         $targetSettings.projects.Add([pscustomobject]@{ id = (Get-MergeUniqueId $usedProjectIds); name = $projectName })
+    }
+    foreach ($task in @($targetTasks) + @($sourceTasks)) {
+        $clientName = ([string]$task.client).Trim()
+        if (-not $clientName -or ($targetSettings.clients | Where-Object { $_.name -ieq $clientName })) { continue }
+        $targetSettings.clients.Add([pscustomobject]@{ id = (Get-MergeUniqueId $usedClientIds); name = $clientName })
     }
 
     $usedTaskIds = @{}

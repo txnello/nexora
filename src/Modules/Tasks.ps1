@@ -64,6 +64,7 @@ function Repair-Tasks {
             description    = [string](Get-Prop $r 'description' '')
             referent       = ([string](Get-Prop $r 'referent' '')).Trim()
             project        = ([string](Get-Prop $r 'project' '')).Trim()
+            client         = ([string](Get-Prop $r 'client' '')).Trim()
             link           = $link
             statusId       = $stId
             priorityId     = $prId
@@ -121,6 +122,14 @@ function Initialize-AppState {
         }
     }
 
+    # clients used by tasks but missing from the list are added (same as projects); tasks without 'client' = no client
+    $beforeClientCount = $settings.clients.Count
+    foreach ($name in @($tasks | ForEach-Object { ([string]$_.client).Trim() } | Where-Object { $_ } | Sort-Object -Unique)) {
+        if (-not ($settings.clients | Where-Object { $_.name -ieq $name })) {
+            [void]$settings.clients.Add([pscustomobject]@{ id = 'cl' + (New-Id).Substring(0, 8); name = $name })
+        }
+    }
+
     $script:State = [pscustomobject]@{
         Settings = $settings; Tasks = $tasks; History = $hist
         Warnings = $warnings; LastScoreDay = (Get-Date).Date
@@ -131,7 +140,7 @@ function Initialize-AppState {
     if ($rs.Source -ne 'main' -or $null -eq (Get-Prop $rs.Data 'language') -or
         $null -eq (Get-Prop $rs.Data 'openOnStartup') -or $null -eq (Get-Prop $rs.Data 'hideOnClose') -or
         (Get-BoundedNumber (Get-Prop $rs.Data 'preferencesVersion' 1) 1 1 2) -lt 2 -or
-        $settings.referents.Count -ne $beforeReferentCount -or $settings.projects.Count -ne $beforeProjectCount) { Save-Settings }
+        $settings.referents.Count -ne $beforeReferentCount -or $settings.projects.Count -ne $beforeProjectCount -or $settings.clients.Count -ne $beforeClientCount) { Save-Settings }
     if ($rt.Source -ne 'main' -or $tasks.Count -ne @(Get-Prop $rt.Data 'tasks' @()).Count) { Save-Tasks }
     if ($rh.Source -ne 'main') { Save-History }
     return $script:State
@@ -179,6 +188,15 @@ function Get-Projects {
     @($names | Sort-Object -Unique)
 }
 
+function Get-Clients {
+    $names = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($c in @($script:State.Settings.clients)) { [void]$names.Add([string]$c.name) }
+    foreach ($name in @($script:State.Tasks | ForEach-Object { $_.client } | Where-Object { $_ })) {
+        if (-not ($names | Where-Object { $_ -ieq $name })) { [void]$names.Add([string]$name) }
+    }
+    @($names | Sort-Object -Unique)
+}
+
 function Get-DashboardStats {
     $s = $script:State.Settings; $today = Get-Date
     $open = 0; $urgent = 0; $overdue = 0; $done = 0
@@ -220,6 +238,7 @@ function Test-TaskInput {
     elseif ($title.Length -gt 200) { $err.Add((T 'The title cannot exceed 200 characters.')) }
     if (([string]$In.Referent).Trim().Length -gt 80) { $err.Add((T 'The owner cannot exceed 80 characters.')) }
     if (([string]$In.Project).Trim().Length -gt 80) { $err.Add((T 'The project cannot exceed 80 characters.')) }
+    if (([string]$In.Client).Trim().Length -gt 80) { $err.Add((T 'The client cannot exceed 80 characters.')) }
     if (([string]$In.Description).Length -gt 10000) { $err.Add((T 'The description is too long (max 10000 characters).')) }
     if (-not (Test-TaskLink ([string]$In.Link))) { $err.Add((T 'The link must be an absolute HTTP or HTTPS URL no longer than 2048 characters.')) }
     if (-not (Get-StatusById $In.StatusId)) { $err.Add((T 'Select a valid status.')) }
@@ -231,7 +250,7 @@ function Get-DefaultTaskInput {
     $s = $script:State.Settings
     $pr = @($s.priorities | Sort-Object value)
     @{
-        Code = Get-NextTaskCode; Title = ''; Description = ''; Referent = $s.userName; Project = ''; Link = ''
+        Code = Get-NextTaskCode; Title = ''; Description = ''; Referent = $s.userName; Project = ''; Client = ''; Link = ''
         StatusId = ($s.statuses | Where-Object { -not $_.isClosed } | Select-Object -First 1).id
         PriorityId = $pr[[int][math]::Floor(($pr.Count - 1) / 2)].id
         DueDate = $null
@@ -250,6 +269,7 @@ function Add-AppTask {
         id = New-Id; code = ([string]$In.Code).Trim(); title = ([string]$In.Title).Trim()
         description = [string]$In.Description; referent = ([string]$In.Referent).Trim()
         project = ([string]$In.Project).Trim()
+        client = ([string]$In.Client).Trim()
         link = ([string]$In.Link).Trim()
         statusId = $In.StatusId; priorityId = $In.PriorityId
         createdAt = $now; updatedAt = $now; dueDate = (Format-IsoDate $In.DueDate)
@@ -281,6 +301,7 @@ function Update-AppTask {
         link = $(if ($In.ContainsKey('Link')) { ([string]$In.Link).Trim() } else { [string]$t.link })
         # an input without 'Project' (older callers) must NOT clear the task's project
         project = $(if ($In.ContainsKey('Project')) { ([string]$In.Project).Trim() } else { ([string]$t.project).Trim() })
+        client = $(if ($In.ContainsKey('Client')) { ([string]$In.Client).Trim() } else { ([string]$t.client).Trim() })
         statusId = $In.StatusId; priorityId = $In.PriorityId; dueDate = (Format-IsoDate $In.DueDate)
     }
     if ($t.code -ne $new.code) { $changes.Add((T 'Code: {0} -> {1}' $t.code $new.code)) }
@@ -288,6 +309,7 @@ function Update-AppTask {
     if ($t.description -ne $new.description) { $changes.Add((T 'Description changed')) }
     if ($t.link -ne $new.link) { $changes.Add((T 'Link changed')) }
     if ($t.referent -ne $new.referent) { $changes.Add((T 'Owner: "{0}" -> "{1}"' $t.referent $new.referent)) }
+    if (([string]$t.client) -ne $new.client) { $changes.Add((T 'Client: "{0}" -> "{1}"' ([string]$t.client) $new.client)) }
     if (([string]$t.project) -ne $new.project) { $changes.Add((T 'Project: "{0}" -> "{1}"' ([string]$t.project) $new.project)) }
     $statusChanged = ($t.statusId -ne $new.statusId)
     if ($statusChanged) { $changes.Add((T 'Status: {0} -> {1}' (Get-StatusById $t.statusId).name (Get-StatusById $new.statusId).name)) }
@@ -303,6 +325,7 @@ function Update-AppTask {
     $t.code = $new.code; $t.title = $new.title; $t.description = $new.description; $t.referent = $new.referent; $t.link = $new.link
     # tasks loaded through Repair-Tasks always have 'project'; Add-Member only guards objects built by hand
     if ($null -eq $t.PSObject.Properties['project']) { $t | Add-Member -NotePropertyName project -NotePropertyValue $new.project } else { $t.project = $new.project }
+    if ($null -eq $t.PSObject.Properties['client']) { $t | Add-Member -NotePropertyName client -NotePropertyValue $new.client } else { $t.client = $new.client }
     $t.statusId = $new.statusId; $t.priorityId = $new.priorityId; $t.dueDate = $new.dueDate
     $now = Format-IsoDateTime (Get-Date)
     $t.updatedAt = $now
@@ -319,7 +342,7 @@ function Set-AppTaskStatus {
     param([string]$Id, [string]$StatusId)
     $t = Get-TaskById $Id
     if ($null -eq $t) { throw (T 'Task not found.') }
-    $in = @{ Code = $t.code; Title = $t.title; Description = $t.description; Referent = $t.referent; Project = [string]$t.project; Link = $t.link
+    $in = @{ Code = $t.code; Title = $t.title; Description = $t.description; Referent = $t.referent; Project = [string]$t.project; Client = [string]$t.client; Link = $t.link
              StatusId = $StatusId; PriorityId = $t.priorityId; DueDate = (ConvertTo-DateTimeValue $t.dueDate) }
     return Update-AppTask $Id $in
 }
@@ -362,7 +385,7 @@ function Copy-AppTask {
     $t = Get-TaskById $Id
     if ($null -eq $t) { throw (T 'Task not found.') }
     $in = @{
-        Code = Get-NextTaskCode; Title = (T '{0} (copy)' $t.title); Description = $t.description; Referent = $t.referent; Project = [string]$t.project; Link = $t.link
+        Code = Get-NextTaskCode; Title = (T '{0} (copy)' $t.title); Description = $t.description; Referent = $t.referent; Project = [string]$t.project; Client = [string]$t.client; Link = $t.link
         StatusId = $t.statusId; PriorityId = $t.priorityId; DueDate = (ConvertTo-DateTimeValue $t.dueDate)
     }
     $copy = Add-AppTask $in

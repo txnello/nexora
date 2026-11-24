@@ -133,7 +133,7 @@ function Show-ItemDialog {
             $d.W.Close()
         } catch {
             $message = $_.Exception.Message
-            foreach ($pattern in (T 'A status named "{0}" already exists.' '*'), (T 'A priority level named "{0}" already exists.' '*'), (T 'An owner named "{0}" already exists.' '*'), (T 'A project named "{0}" already exists.' '*')) {
+            foreach ($pattern in (T 'A status named "{0}" already exists.' '*'), (T 'A priority level named "{0}" already exists.' '*'), (T 'An owner named "{0}" already exists.' '*'), (T 'A project named "{0}" already exists.' '*'), (T 'A client named "{0}" already exists.' '*')) {
                 if ($message -like $pattern) { Set-FieldInvalid $nn.itmName $true; break }
             }
             $nn.itmError.Text = $message
@@ -144,6 +144,24 @@ function Show-ItemDialog {
     Set-DialogOwner $w
     [void]$w.ShowDialog()
     return $script:Id.Saved
+}
+
+function Get-TaskDialogClientItems {
+    param([string]$CurrentName = '')
+    $items = New-Object 'System.Collections.Generic.List[psobject]'
+    $items.Add([pscustomobject]@{ name = (T '(no client)'); value = ''; IsCreateAction = $false })
+    $seen = @{}
+    foreach ($name in (Get-Clients)) {
+        if ($name -and -not $seen.ContainsKey($name)) {
+            $seen[$name] = $true
+            $items.Add([pscustomobject]@{ name = $name; value = $name; IsCreateAction = $false })
+        }
+    }
+    if ($CurrentName -and -not $seen.ContainsKey($CurrentName)) {
+        $items.Add([pscustomobject]@{ name = $CurrentName; value = $CurrentName; IsCreateAction = $false })
+    }
+    $items.Add([pscustomobject]@{ name = (T 'Create new client…'); value = ''; IsCreateAction = $true })
+    return @($items.ToArray())
 }
 
 function Get-TaskDialogProjectItems {
@@ -195,7 +213,7 @@ function Show-TaskDialog {
     # Creates or edits a task. Returns $true if something was saved (task, reminder, deletion).
     param([string]$TaskId = '', [switch]$NoModal)
     $w = Import-Xaml 'TaskDialog.xaml'
-    $names = 'colSide', 'dlgTitle', 'txtCode', 'txtTitle', 'txtDesc', 'txtLink', 'cmbProject', 'cmbReferent', 'cmbStatus', 'cmbPriority', 'txtDue', 'dueHint',
+    $names = 'colSide', 'dlgTitle', 'txtCode', 'txtTitle', 'txtDesc', 'txtLink', 'cmbClient', 'cmbProject', 'cmbReferent', 'cmbStatus', 'cmbPriority', 'txtDue', 'dueHint',
         'btnCal', 'calPopup', 'calendar', 'btnToday', 'btnTomorrow', 'btnWeek', 'btnNoDue', 'txtMeta', 'txtError', 'taskFormScroll', 'sidePanel', 'txtScore', 'barScore',
         'txtBreakdown', 'txtRemCount', 'txtRemLast', 'btnRemind', 'btnUnRemind', 'lstHistory', 'btnDelete', 'btnSave', 'btnCancel'
     $n = Get-Named $w $names
@@ -217,6 +235,7 @@ function Show-TaskDialog {
         $n.txtCode.Text = $t.code; $n.txtTitle.Text = $t.title; $n.txtDesc.Text = $t.description; $n.txtLink.Text = [string]$t.link
         $currentReferent = [string]$t.referent
         $currentProject = [string]$t.project
+        $currentClient = [string]$t.client
         $n.cmbStatus.SelectedItem = (@($n.cmbStatus.ItemsSource) | Where-Object { -not $_.IsCreateAction -and $_.id -eq $t.statusId } | Select-Object -First 1)
         $n.cmbPriority.SelectedItem = (@($n.cmbPriority.ItemsSource) | Where-Object { -not $_.IsCreateAction -and $_.id -eq $t.priorityId } | Select-Object -First 1)
         $script:Td.LastStatusId = $t.statusId
@@ -229,6 +248,7 @@ function Show-TaskDialog {
         $n.txtLink.Text = $d.Link
         $currentReferent = [string]$d.Referent
         $currentProject = [string]$d.Project
+        $currentClient = [string]$d.Client
         $n.cmbStatus.SelectedItem = (@($n.cmbStatus.ItemsSource) | Where-Object { -not $_.IsCreateAction -and $_.id -eq $d.StatusId } | Select-Object -First 1)
         $n.cmbPriority.SelectedItem = (@($n.cmbPriority.ItemsSource) | Where-Object { -not $_.IsCreateAction -and $_.id -eq $d.PriorityId } | Select-Object -First 1)
         $script:Td.LastStatusId = $d.StatusId
@@ -246,6 +266,10 @@ function Show-TaskDialog {
     $n.cmbProject.SelectedItem = ($n.cmbProject.ItemsSource | Where-Object { -not $_.IsCreateAction -and $_.value -ieq $currentProject } | Select-Object -First 1)
     $script:Td.LastProject = $currentProject
     $script:Td.HandlingProjectSelection = $false
+    $n.cmbClient.ItemsSource = Get-TaskDialogClientItems $currentClient
+    $n.cmbClient.SelectedItem = ($n.cmbClient.ItemsSource | Where-Object { -not $_.IsCreateAction -and $_.value -ieq $currentClient } | Select-Object -First 1)
+    $script:Td.LastClient = $currentClient
+    $script:Td.HandlingClientSelection = $false
     $n.dueHint.Text = 'es. ' + (Format-AppDate (Get-Date) $st)
     $n.dueHint.Visibility = $(if ($n.txtDue.Text -eq '') { 'Visible' } else { 'Collapsed' })
 
@@ -314,6 +338,28 @@ function Show-TaskDialog {
                 $s.SelectedItem = ($s.ItemsSource | Where-Object { -not $_.IsCreateAction -and $_.value -ieq $name } | Select-Object -First 1)
                 $td.LastReferent = $name
             } finally { $td.HandlingReferentSelection = $false }
+        }
+    }
+    On $n.cmbClient 'SelectionChanged' { param($s, $e)
+        $td = $script:Td
+        if ($td.HandlingClientSelection) { return }
+        $selected = $s.SelectedItem
+        if ($null -eq $selected) { return }
+        if (-not $selected.IsCreateAction) { $td.LastClient = [string]$selected.value; return }
+        $td.HandlingClientSelection = $true
+        try {
+            $s.SelectedItem = ($s.ItemsSource | Where-Object { -not $_.IsCreateAction -and $_.value -ieq $td.LastClient } | Select-Object -First 1)
+        } finally { $td.HandlingClientSelection = $false }
+        $saved = Show-ItemDialog -Title (T 'New client') -Initial @{ Name = ''; Color = '#6B7280'; IsClosed = $false } -ShowValue $false -ShowClosed $false -ShowColor $false -MaxNameLength 80 -OnSave {
+            param($d) $created = Add-Client $d.Name; $script:Td.CreatedClientName = $created.name }
+        if ($saved) {
+            $name = $td.CreatedClientName
+            $td.HandlingClientSelection = $true
+            try {
+                $s.ItemsSource = Get-TaskDialogClientItems $name
+                $s.SelectedItem = ($s.ItemsSource | Where-Object { -not $_.IsCreateAction -and $_.value -ieq $name } | Select-Object -First 1)
+                $td.LastClient = $name
+            } finally { $td.HandlingClientSelection = $false }
         }
     }
     On $n.cmbProject 'SelectionChanged' { param($s, $e)
@@ -405,7 +451,7 @@ function Show-TaskDialog {
 function Save-TaskDialog {
     $td = $script:Td; $n = $td.N; $st = $script:State.Settings
     $n.txtError.Visibility = 'Collapsed'
-    foreach ($field in $n.txtCode, $n.txtTitle, $n.txtDesc, $n.txtLink, $n.txtDue, $n.cmbProject, $n.cmbReferent, $n.cmbStatus, $n.cmbPriority) { Set-FieldInvalid $field $false }
+    foreach ($field in $n.txtCode, $n.txtTitle, $n.txtDesc, $n.txtLink, $n.txtDue, $n.cmbClient, $n.cmbProject, $n.cmbReferent, $n.cmbStatus, $n.cmbPriority) { Set-FieldInvalid $field $false }
     try {
         $due = $null
         if ($n.txtDue.Text.Trim() -ne '') {
@@ -418,6 +464,7 @@ function Save-TaskDialog {
         $in = @{
             Code = $n.txtCode.Text; Title = $n.txtTitle.Text; Description = $n.txtDesc.Text; Link = $n.txtLink.Text
             Referent = $(if ($n.cmbReferent.SelectedItem -and -not $n.cmbReferent.SelectedItem.IsCreateAction) { [string]$n.cmbReferent.SelectedItem.value } else { '' })
+            Client = $(if ($n.cmbClient.SelectedItem -and -not $n.cmbClient.SelectedItem.IsCreateAction) { [string]$n.cmbClient.SelectedItem.value } else { '' })
             Project = $(if ($n.cmbProject.SelectedItem -and -not $n.cmbProject.SelectedItem.IsCreateAction) { [string]$n.cmbProject.SelectedItem.value } else { '' })
             StatusId = $(if ($n.cmbStatus.SelectedItem) { $n.cmbStatus.SelectedItem.id } else { '' })
             PriorityId = $(if ($n.cmbPriority.SelectedItem) { $n.cmbPriority.SelectedItem.id } else { '' })
@@ -442,6 +489,7 @@ function Set-TaskDialogFieldErrors {
     Set-FieldInvalid $Controls.txtTitle (([string]$TaskInput.Title).Trim().Length -eq 0 -or ([string]$TaskInput.Title).Length -gt 200)
     Set-FieldInvalid $Controls.cmbReferent (([string]$TaskInput.Referent).Trim().Length -gt 80)
     Set-FieldInvalid $Controls.cmbProject (([string]$TaskInput.Project).Trim().Length -gt 80)
+    Set-FieldInvalid $Controls.cmbClient (([string]$TaskInput.Client).Trim().Length -gt 80)
     Set-FieldInvalid $Controls.txtDesc (([string]$TaskInput.Description).Length -gt 10000)
     Set-FieldInvalid $Controls.txtLink (-not (Test-TaskLink ([string]$TaskInput.Link)))
     Set-FieldInvalid $Controls.cmbStatus ($null -eq (Get-StatusById $TaskInput.StatusId))

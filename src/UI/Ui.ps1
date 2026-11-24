@@ -15,20 +15,20 @@ $script:ExitRequested = $false
 $script:ReplacingMainWindow = $false
 
 $script:MainNames = @(
-    'colSide', 'txtBrand', 'btnTheme', 'lblTheme', 'btnAbout', 'lblAbout', 'btnDonate', 'lblDonate', 'navDashboard', 'navAll', 'navMine', 'navByRef', 'navByProject', 'navDone', 'navSettings',
-    'lblDashboard', 'lblAll', 'lblMine', 'lblByRef', 'lblByProject', 'lblDone', 'lblSettings', 'btnNew', 'txtTitle', 'txtSubtitle', 'statsPanel',
+    'colSide', 'txtBrand', 'btnTheme', 'lblTheme', 'btnAbout', 'lblAbout', 'btnDonate', 'lblDonate', 'navDashboard', 'navAll', 'navMine', 'navByRef', 'navByClient', 'navByProject', 'navDone', 'navSettings',
+    'lblDashboard', 'lblAll', 'lblMine', 'lblByRef', 'lblByClient', 'lblByProject', 'lblDone', 'lblSettings', 'btnNew', 'txtTitle', 'txtSubtitle', 'statsPanel',
     'cardOpen', 'cardUrgent', 'cardOverdue', 'cardDone', 'txtOpen', 'txtUrgent', 'txtOverdue', 'txtDone', 'filterPanel', 'txtSearch', 'searchHint',
-    'cmbStatus', 'cmbPriority', 'cmbProject', 'cmbReferent', 'btnClear', 'btnEdit', 'btnReminder', 'btnDuplicate', 'btnDelete', 'tableCard', 'txtInfo', 'grid',
+    'cmbStatus', 'cmbPriority', 'cmbClient', 'cmbProject', 'cmbReferent', 'btnClear', 'btnEdit', 'btnReminder', 'btnDuplicate', 'btnDelete', 'tableCard', 'txtInfo', 'grid',
     'emptyState', 'emptyIcon', 'emptyTitle', 'emptyText', 'btnEmptyNew', 'settingsView', 'lstStatuses', 'btnStAdd', 'btnStEdit', 'btnStDel',
-    'btnStUp', 'btnStDown', 'lstPriorities', 'btnPrAdd', 'btnPrEdit', 'btnPrDel', 'lstReferents', 'btnRfAdd', 'btnRfEdit', 'btnRfDel', 'btnRfUp', 'btnRfDown', 'lstProjects', 'btnPjAdd', 'btnPjEdit', 'btnPjDel', 'btnPjUp', 'btnPjDown', 'sldPriority', 'sldDeadline', 'sldReminders', 'sldAge',
+    'btnStUp', 'btnStDown', 'lstPriorities', 'btnPrAdd', 'btnPrEdit', 'btnPrDel', 'lstReferents', 'btnRfAdd', 'btnRfEdit', 'btnRfDel', 'btnRfUp', 'btnRfDown', 'lstProjects', 'btnPjAdd', 'btnPjEdit', 'btnPjDel', 'btnPjUp', 'btnPjDown', 'lstClients', 'btnClAdd', 'btnClEdit', 'btnClDel', 'btnClUp', 'btnClDown', 'sldPriority', 'sldDeadline', 'sldReminders', 'sldAge',
     'valPriority', 'valDeadline', 'valReminders', 'valAge', 'txtWeightSum', 'txtNoDue', 'txtAgeCap', 'txtUrgent2', 'txtParamsError', 'btnParamsSave', 'btnWeightsReset',
     'cmbLanguage', 'cmbTheme', 'cmbDateFormat', 'txtPrefix', 'txtUserName', 'txtMaxBackups', 'txtPrefError', 'btnPrefSave', 'btnWebsiteSettings', 'txtDataPath', 'chkMoveData',
     'chkOpenOnStartup', 'chkHideOnClose', 'lstBackups', 'btnBkNow', 'btnBkRestore', 'btnBkExport', 'btnBkImport', 'btnChangeDataFolder', 'btnBkOpen', 'toast', 'toastIcon', 'toastText'
 )
 
 # table columns (indices)
-$script:ColBulk = 0; $script:ColCode = 1; $script:ColTitle = 2; $script:ColProject = 3; $script:ColReferent = 4; $script:ColStatus = 5
-$script:ColPriority = 6; $script:ColDue = 7; $script:ColReminders = 8; $script:ColScore = 9; $script:ColCompleted = 10; $script:ColLink = 11
+$script:ColBulk = 0; $script:ColCode = 1; $script:ColTitle = 2; $script:ColClient = 3; $script:ColProject = 4; $script:ColReferent = 5; $script:ColStatus = 6
+$script:ColPriority = 7; $script:ColDue = 8; $script:ColReminders = 9; $script:ColScore = 10; $script:ColCompleted = 11; $script:ColLink = 12
 
 # ------------------------------------------------------------------ Utilities
 
@@ -86,7 +86,9 @@ function New-TaskRow {
     $r.Snippet = [string]$first
     $r.Referent = $(if ($t.referent) { $t.referent } else { '—' })
     $r.Project = $(if ($t.project) { $t.project } else { '—' })
-    $r.Group = $(if ($script:View -eq 'byproject') { $(if ($t.project) { $t.project } else { (T '(no project)') }) }
+    $r.Client = $(if ($t.client) { $t.client } else { '—' })
+    $r.Group = $(if ($script:View -eq 'byclient') { $(if ($t.client) { $t.client } else { (T '(no client)') }) }
+                 elseif ($script:View -eq 'byproject') { $(if ($t.project) { $t.project } else { (T '(no project)') }) }
                  else { $(if ($t.referent) { $t.referent } else { (T '(no owner)') }) })
     $r.StatusName = $stt.name; $r.StatusColor = $stt.color; $r.StatusBg = ConvertTo-TintHex $stt.color; $r.StatusOrder = $ctx.StatusIdx[$t.statusId]
     $r.PriorityName = $prr.name; $r.PriorityColor = $prr.color; $r.PriorityBg = ConvertTo-TintHex $prr.color; $r.PriorityValue = [double]$prr.value
@@ -132,6 +134,7 @@ function Get-VisibleRows {
     $q = $u.txtSearch.Text.Trim()
     $fSt = Get-FilterId $u.cmbStatus; $fPr = Get-FilterId $u.cmbPriority; $fRef = Get-FilterId $u.cmbReferent
     $fProj = Get-FilterId $u.cmbProject
+    $fClient = Get-FilterId $u.cmbClient
     $me = $s.userName
     $rows = New-Object 'System.Collections.Generic.List[TaskRow]'
     foreach ($t in $script:State.Tasks) {
@@ -147,6 +150,7 @@ function Get-VisibleRows {
             'mine' { if (-not $me -or $t.referent -ine $me) { $skip = $true } }
             'byref' { if ($closed) { $skip = $true } }
             'byproject' { if ($closed) { $skip = $true } }
+            'byclient' { if ($closed) { $skip = $true } }
             'done' { if (-not $closed) { $skip = $true } }
         }
         if ($skip) { continue }
@@ -154,9 +158,10 @@ function Get-VisibleRows {
         if ($fPr -and $t.priorityId -ne $fPr) { continue }
         if ($fRef -and $t.referent -ine $fRef) { continue }
         if ($fProj -and ([string]$t.project) -ine $fProj) { continue }
+        if ($fClient -and ([string]$t.client) -ine $fClient) { continue }
         if ($q) {
             $cmp = [System.StringComparison]::OrdinalIgnoreCase
-            if ($t.code.IndexOf($q, $cmp) -lt 0 -and $t.title.IndexOf($q, $cmp) -lt 0 -and ([string]$t.referent).IndexOf($q, $cmp) -lt 0 -and ([string]$t.project).IndexOf($q, $cmp) -lt 0) { continue }
+            if ($t.code.IndexOf($q, $cmp) -lt 0 -and $t.title.IndexOf($q, $cmp) -lt 0 -and ([string]$t.referent).IndexOf($q, $cmp) -lt 0 -and ([string]$t.project).IndexOf($q, $cmp) -lt 0 -and ([string]$t.client).IndexOf($q, $cmp) -lt 0) { continue }
         }
         $rows.Add((New-TaskRow $t $ctx))
     }
@@ -169,7 +174,7 @@ function Set-GridSort {
     $items.SortDescriptions.Clear(); $items.GroupDescriptions.Clear()
     $asc = [System.ComponentModel.ListSortDirection]::Ascending; $desc = [System.ComponentModel.ListSortDirection]::Descending
     foreach ($c in $u.grid.Columns) { $c.SortDirection = $null }
-    $grouped = ($script:View -eq 'byref' -or $script:View -eq 'byproject')
+    $grouped = ($script:View -eq 'byref' -or $script:View -eq 'byproject' -or $script:View -eq 'byclient')
     if ($grouped) {
         [void]$items.GroupDescriptions.Add((New-Object System.Windows.Data.PropertyGroupDescription 'Group'))
     }
@@ -233,6 +238,7 @@ function Refresh-Tasks {
         'mine' { $u.txtSubtitle.Text = $(if ($s.userName) { (T '{0} tasks assigned to {1}' $n $s.userName) } else { '' }) }
         'byref' { $u.txtSubtitle.Text = (T '{0} open tasks grouped by owner' $n) }
         'byproject' { $u.txtSubtitle.Text = (T '{0} open tasks grouped by project' $n) }
+        'byclient' { $u.txtSubtitle.Text = (T '{0} open tasks grouped by client' $n) }
         'done' { $u.txtSubtitle.Text = (T '{0} completed tasks' $n) }
     }
     $u.txtInfo.Visibility = 'Collapsed'
@@ -242,7 +248,7 @@ function Refresh-Tasks {
     }
     if ($n -eq 0) {
         $u.emptyState.Visibility = 'Visible'
-        $filtered = ($u.txtSearch.Text.Trim() -ne '' -or (Get-FilterId $u.cmbStatus) -or (Get-FilterId $u.cmbPriority) -or (Get-FilterId $u.cmbProject) -or (Get-FilterId $u.cmbReferent) -or $script:Quick)
+        $filtered = ($u.txtSearch.Text.Trim() -ne '' -or (Get-FilterId $u.cmbStatus) -or (Get-FilterId $u.cmbPriority) -or (Get-FilterId $u.cmbClient) -or (Get-FilterId $u.cmbProject) -or (Get-FilterId $u.cmbReferent) -or $script:Quick)
         $u.btnEmptyNew.Visibility = 'Collapsed'
         if ($script:State.Tasks.Count -eq 0) {
             $u.emptyTitle.Text = (T 'No tasks yet')
@@ -283,6 +289,7 @@ function Update-FilterCombos {
         $sets = @(
             @{ C = $u.cmbStatus; All = (T 'All statuses'); Items = @($s.statuses | ForEach-Object { [pscustomobject]@{ id = $_.id; name = $_.name } }) },
             @{ C = $u.cmbPriority; All = (T 'All priorities'); Items = @($s.priorities | Sort-Object { -[double]$_.value } | ForEach-Object { [pscustomobject]@{ id = $_.id; name = $_.name } }) },
+            @{ C = $u.cmbClient; All = (T 'All clients'); Items = @(Get-Clients | ForEach-Object { [pscustomobject]@{ id = $_; name = $_ } }) },
             @{ C = $u.cmbProject; All = (T 'All projects'); Items = @(Get-Projects | ForEach-Object { [pscustomobject]@{ id = $_; name = $_ } }) },
             @{ C = $u.cmbReferent; All = (T 'All owners'); Items = @(Get-Referents | ForEach-Object { [pscustomobject]@{ id = $_; name = $_ } }) }
         )
@@ -312,12 +319,12 @@ function Set-View {
     foreach ($c in $u.statsPanel, $u.filterPanel, $u.tableCard) { $c.Visibility = $(if ($isSettings) { 'Collapsed' } else { 'Visible' }) }
     if (-not $isSettings -and $Name -ne 'dashboard') { $u.statsPanel.Visibility = 'Collapsed' }
     $u.btnNew.Visibility = $(if ($isSettings) { 'Collapsed' } else { 'Visible' })
-    $titles = @{ dashboard = 'Dashboard'; all = (T 'All tasks'); mine = (T 'My tasks'); byref = (T 'By owner'); byproject = (T 'By project'); done = (T 'Completed'); settings = (T 'Settings') }
+    $titles = @{ dashboard = 'Dashboard'; all = (T 'All tasks'); mine = (T 'My tasks'); byref = (T 'By owner'); byproject = (T 'By project'); byclient = (T 'By client'); done = (T 'Completed'); settings = (T 'Settings') }
     $u.txtTitle.Text = $titles[$Name]
-    # group header icon: folder for projects, person for owners
-    $u.grid.Tag = $(if ($Name -eq 'byproject') { [string][char]0xE8B7 } else { [string][char]0xE77B })
+    # group header icon: shop for clients, folder for projects, person for owners
+    $u.grid.Tag = $(if ($Name -eq 'byclient') { [string][char]0xE719 } elseif ($Name -eq 'byproject') { [string][char]0xE8B7 } else { [string][char]0xE77B })
     $script:Updating = $true
-    $u.cmbStatus.SelectedIndex = 0; $u.cmbPriority.SelectedIndex = 0; $u.cmbProject.SelectedIndex = 0; $u.cmbReferent.SelectedIndex = 0
+    $u.cmbStatus.SelectedIndex = 0; $u.cmbPriority.SelectedIndex = 0; $u.cmbClient.SelectedIndex = 0; $u.cmbProject.SelectedIndex = 0; $u.cmbReferent.SelectedIndex = 0
     $script:Updating = $false
     Update-Layout
     if ($isSettings) {
@@ -332,11 +339,12 @@ function Update-Layout {
     $compact = ($w -lt 1020)
     $u.colSide.Width = New-Object System.Windows.GridLength($(if ($compact) { 74 } else { 236 }))
     $vis = $(if ($compact) { 'Collapsed' } else { 'Visible' })
-    foreach ($l in 'txtBrand', 'lblAbout', 'lblDonate', 'lblTheme', 'lblDashboard', 'lblAll', 'lblMine', 'lblByRef', 'lblByProject', 'lblDone', 'lblSettings') { $u[$l].Visibility = $vis }
+    foreach ($l in 'txtBrand', 'lblAbout', 'lblDonate', 'lblTheme', 'lblDashboard', 'lblAll', 'lblMine', 'lblByRef', 'lblByClient', 'lblByProject', 'lblDone', 'lblSettings') { $u[$l].Visibility = $vis }
     # bottom buttons: in compact mode drop the horizontal padding so the 26px icon fits (and centres) in the narrow sidebar
     $pad = $(if ($compact) { New-Object System.Windows.Thickness(0, 8, 0, 8) } else { New-Object System.Windows.Thickness(14, 8, 14, 8) })
     foreach ($b in 'btnDonate', 'btnAbout', 'btnTheme') { $u[$b].Padding = $pad }
     $cols = $u.grid.Columns
+    $cols[$script:ColClient].Visibility = $(if ($w -lt 1420 -or $script:View -eq 'byclient') { 'Collapsed' } else { 'Visible' })
     $cols[$script:ColProject].Visibility = $(if ($w -lt 1300 -or $script:View -eq 'byproject') { 'Collapsed' } else { 'Visible' })
     $cols[$script:ColReferent].Visibility = $(if ($w -lt 1180 -or $script:View -eq 'byref') { 'Collapsed' } else { 'Visible' })
     $cols[$script:ColReminders].Visibility = $(if ($w -lt 1050) { 'Collapsed' } else { 'Visible' })
@@ -556,6 +564,7 @@ function Load-SettingsView {
     $selP = $(if ($u.lstPriorities.SelectedItem) { $u.lstPriorities.SelectedItem.id } else { $null })
     $selR = $(if ($u.lstReferents.SelectedItem) { $u.lstReferents.SelectedItem.id } else { $null })
     $selPj = $(if ($u.lstProjects.SelectedItem) { $u.lstProjects.SelectedItem.id } else { $null })
+    $selCl = $(if ($u.lstClients.SelectedItem) { $u.lstClients.SelectedItem.id } else { $null })
     $sl = @($s.statuses | ForEach-Object { [pscustomobject]@{ id = $_.id; name = $_.name; color = $_.color; kind = $(if ($_.isClosed) { (T 'closed') } else { (T 'open') }) } })
     $u.lstStatuses.ItemsSource = $sl
     if ($selS) { $u.lstStatuses.SelectedItem = ($sl | Where-Object { $_.id -eq $selS } | Select-Object -First 1) }
@@ -568,6 +577,9 @@ function Load-SettingsView {
     $pjl = @($s.projects | ForEach-Object { [pscustomobject]@{ id = $_.id; name = $_.name } })
     $u.lstProjects.ItemsSource = $pjl
     if ($selPj) { $u.lstProjects.SelectedItem = ($pjl | Where-Object { $_.id -eq $selPj } | Select-Object -First 1) }
+    $cll = @($s.clients | ForEach-Object { [pscustomobject]@{ id = $_.id; name = $_.name } })
+    $u.lstClients.ItemsSource = $cll
+    if ($selCl) { $u.lstClients.SelectedItem = ($cll | Where-Object { $_.id -eq $selCl } | Select-Object -First 1) }
 
     $script:WUpd = $true
     try {
@@ -885,6 +897,34 @@ function Register-SettingsHandlers {
     On $u.btnRfUp 'Click' { param($s, $e) $id = Get-ListSelectionId $script:Ui.lstReferents (T 'an owner'); if ($id) { Move-Referent $id -1; Load-SettingsView } }
     On $u.btnRfDown 'Click' { param($s, $e) $id = Get-ListSelectionId $script:Ui.lstReferents (T 'an owner'); if ($id) { Move-Referent $id 1; Load-SettingsView } }
 
+    # ---- clients
+    On $u.btnClAdd 'Click' { param($s, $e)
+        $saved = Show-ItemDialog -Title (T 'New client') -Initial @{ Name = ''; Color = '#6B7280'; IsClosed = $false } -ShowValue $false -ShowClosed $false -ShowColor $false -MaxNameLength 80 -OnSave {
+            param($d) $null = Add-Client $d.Name }
+        if ($saved) { Load-SettingsView; Update-FilterCombos; Show-Toast (T 'Client created') }
+    }
+    On $u.btnClEdit 'Click' { param($s, $e)
+        $id = Get-ListSelectionId $script:Ui.lstClients (T 'a client'); if (-not $id) { return }
+        $c = Get-ClientById $id
+        $script:EditId = $id
+        $saved = Show-ItemDialog -Title (T 'Edit client') -Initial @{ Name = $c.name; Color = '#6B7280'; IsClosed = $false } -ShowValue $false -ShowClosed $false -ShowColor $false -MaxNameLength 80 -OnSave {
+            param($d) Update-Client $script:EditId $d.Name }
+        if ($saved) { Load-SettingsView; Refresh-All; Show-Toast (T 'Client updated') }
+    }
+    On $u.btnClDel 'Click' { param($s, $e)
+        $id = Get-ListSelectionId $script:Ui.lstClients (T 'a client'); if (-not $id) { return }
+        $c = Get-ClientById $id
+        $n = @($script:State.Tasks | Where-Object { $_.client -ieq $c.name }).Count
+        $txt = $(if ($n -gt 0) { (T '{0} tasks use this client: they will be kept and left without a client.' $n) } else { (T 'No task uses this client.') })
+        if (Show-Message -Title (T 'Delete client «{0}»?' $c.name) -Text $txt -Yes (T 'Delete') -No (T 'Cancel') -Danger -Icon 'warn') {
+            $removed = Remove-Client $id
+            Load-SettingsView; Refresh-All
+            Show-Toast $(if ($removed.Moved -gt 0) { (T 'Client deleted · {0} tasks left without a client' $removed.Moved) } else { (T 'Client deleted') })
+        }
+    }
+    On $u.btnClUp 'Click' { param($s, $e) $id = Get-ListSelectionId $script:Ui.lstClients (T 'a client'); if ($id) { Move-Client $id -1; Load-SettingsView } }
+    On $u.btnClDown 'Click' { param($s, $e) $id = Get-ListSelectionId $script:Ui.lstClients (T 'a client'); if ($id) { Move-Client $id 1; Load-SettingsView } }
+
     # ---- projects
     On $u.btnPjAdd 'Click' { param($s, $e)
         $saved = Show-ItemDialog -Title (T 'New project') -Initial @{ Name = ''; Color = '#6B7280'; IsClosed = $false } -ShowValue $false -ShowClosed $false -ShowColor $false -MaxNameLength 80 -OnSave {
@@ -1144,6 +1184,7 @@ function New-MainWindow {
     On $u.navAll 'Checked' { param($s, $e) Set-View 'all' }
     On $u.navMine 'Checked' { param($s, $e) Set-View 'mine' }
     On $u.navByRef 'Checked' { param($s, $e) Set-View 'byref' }
+    On $u.navByClient 'Checked' { param($s, $e) Set-View 'byclient' }
     On $u.navByProject 'Checked' { param($s, $e) Set-View 'byproject' }
     On $u.navDone 'Checked' { param($s, $e) Set-View 'done' }
     On $u.navSettings 'Checked' { param($s, $e) Set-View 'settings' }
@@ -1159,13 +1200,13 @@ function New-MainWindow {
         $script:Ui.searchHint.Visibility = $(if ($script:Ui.txtSearch.Text -eq '') { 'Visible' } else { 'Collapsed' })
         Refresh-Tasks
     }
-    foreach ($c in $u.cmbStatus, $u.cmbPriority, $u.cmbProject, $u.cmbReferent) {
+    foreach ($c in $u.cmbStatus, $u.cmbPriority, $u.cmbClient, $u.cmbProject, $u.cmbReferent) {
         On $c 'SelectionChanged' { param($s, $e) if (-not $script:Updating) { Refresh-Tasks } }
     }
     On $u.btnClear 'Click' { param($s, $e)
         $x = $script:Ui
         $script:Updating = $true
-        $x.txtSearch.Text = ''; $x.cmbStatus.SelectedIndex = 0; $x.cmbPriority.SelectedIndex = 0; $x.cmbProject.SelectedIndex = 0; $x.cmbReferent.SelectedIndex = 0
+        $x.txtSearch.Text = ''; $x.cmbStatus.SelectedIndex = 0; $x.cmbPriority.SelectedIndex = 0; $x.cmbClient.SelectedIndex = 0; $x.cmbProject.SelectedIndex = 0; $x.cmbReferent.SelectedIndex = 0
         $script:Updating = $false
         $script:Quick = ''; $script:ManualSort = $false
         Refresh-Tasks
