@@ -1,6 +1,6 @@
 # NEXORA – Technical documentation
 
-Document version: 1.0.4 · Verification status is reported at the end (see *Verification status* section).
+Document version: 1.0.5 · Verification status is reported at the end (see *Verification status* section).
 
 ## 1. Analysis of the starting project (Phase 1)
 
@@ -15,7 +15,7 @@ The existing project was a WPF app written in PowerShell (5.1/7), JSON-based, wi
 | Dependencies | Windows PowerShell 5.1 / WPF (.NET Framework 4.x), no external modules | unchanged |
 | Architectural issues | data inside the app folder (incompatible with Program Files); launch via console; `TaskRow` class and P/Invoke recompiled at every launch with `Add-Type` | data separated; `Nexora.exe`; native code compiled into the exe |
 
-Existing JSON files remain compatible: format unchanged, new fields (`language`, `lastRunVersion`, `openOnStartup`, `hideOnClose`, `preferencesVersion`) are optional and added on first launch. The preferences migration updates `hideOnClose` to the new active default only once.
+Existing JSON files remain compatible: format unchanged, new fields (`language`, `lastRunVersion`, `openOnStartup`, `hideOnClose`, `preferencesVersion`, and since 1.0.5 `settings.projects`, `settings.clients`, `task.project`, `task.client`) are optional and added on first launch. Files written by 1.0.4 have none of the project/client keys: a task without them is read as "no project" / "no client", no migration runs and nothing is rewritten until the user uses the new fields. The preferences migration updates `hideOnClose` to the new active default only once.
 
 ## 2. Product architecture
 
@@ -49,7 +49,7 @@ The launcher (`Build\Launcher\Program.cs`) is compiled with .NET Framework 4's `
 ```
 Startup and background options are saved immediately when a checkbox changes. Auto-start uses `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\NEXORA`. In both cases the user can disable it from Task Manager. The background option uses `NotifyIcon` and cancels window closure when active (default); the tray icon menu lets the user restore or exit the app. Reopening NEXORA from the shortcut while it is already running sends a request to the active instance, which restores the hidden window instead of showing a warning. Windows session logoff and the *Exit* command terminate the process regardless.
 Data path: `NEXORA_DATA` variable (test/IT) › path chosen by the user in `%LOCALAPPDATA%\Nexora\data-path.txt` › portable mode (`portable.flag` file next to the app → `.\Data`) › `%LOCALAPPDATA%\Nexora`.
-In normal use another folder can be chosen from *Settings → Backup and data*. The persistent selection is in `%LOCALAPPDATA%\Nexora\data-path.txt`, independent of the transferred files. For an empty destination, copying current data is preselected and the source is left intact. For a populated destination you can replace it (after saving a backup copy), switch to the data already there without copying the current data into it, or merge tasks, statuses, priorities, referents and history. During the merge the destination wins for scalar preferences and, in case of identical status/priority names, for their colors and values; entities with different names are kept.
+In normal use another folder can be chosen from *Settings → Backup and data*. The persistent selection is in `%LOCALAPPDATA%\Nexora\data-path.txt`, independent of the transferred files. For an empty destination, copying current data is preselected and the source is left intact. For a populated destination you can replace it (after saving a backup copy), switch to the data already there without copying the current data into it, or merge tasks, statuses, priorities, referents, clients, projects and history. During the merge the destination wins for scalar preferences and, in case of identical status/priority names, for their colors and values; entities with different names are kept.
 The selection is local to the Windows profile and does not coordinate multiple instances across different devices: use a synchronized folder only once synchronization is complete and with NEXORA closed on the other devices.
 
 ### 2.1 Support (donation) button
@@ -61,6 +61,7 @@ The button uses the `DonateButton` style (`src\UI\Styles.xaml`): a brand gradien
 - Atomic writes (temporary file + replacement, `.bak` copy), corrupted JSON → restore from `.bak` with a notice and a copy of the corrupted file in `Backups\corrotto-*`.
 - Daily automatic backup, before deletions/imports and **before the first launch of a new version** (`pre-upgrade`); manual backups are never deleted; `.zip` export/import.
 - Data repaired on load (nonexistent statuses/priorities, wrong dates, duplicate codes).
+- Clients and projects (1.0.5) follow the same model as owners: the list lives in `settings.clients` / `settings.projects` (`{id, name}`, name up to 80 characters, unique case-insensitively) and each task stores the **name** in `task.client` / `task.project` (empty string = none). The two fields are independent: a client does not own projects. Names used by tasks but missing from the list are added on load. Renaming updates the tasks that use the name. Deleting never deletes tasks: they go back to "no client" / "no project", after a safety snapshot (`pre-delete-client`, `pre-delete-project`). An update call whose input has no `Client` / `Project` key (older callers) leaves the stored value untouched; `Repair-Tasks` and the merge in `Storage.ps1` list task fields explicitly, so any new task field must be added to both. A version older than 1.0.5 ignores these fields and drops them the next time it saves.
 
 ## 4. Versioning
 - `VERSION` file at the root: `Major.Minor.Patch` (e.g. `1.0.0`). **This is the only place to change for a release.**
@@ -78,6 +79,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File Build\Build-Nexora.ps1 -Cert
 ```
 Steps: logic tests → assets → `Nexora.exe` (icon, manifest, metadata) → package in `Build\out\stage` → `ISCC` (Inno Setup 6, `winget install JRSoftware.InnoSetup`) → `Release\` (`Nexora-Setup.exe`, `README.txt`, `LICENSE.txt`).
 
+One-step alternative for people building from the downloaded sources: `Build\UpdateInstaller.bat` asks for administrator rights, installs Inno Setup 6 with `winget` when `ISCC.exe` is not found, runs `Build-Nexora.ps1` (it stops there if the build fails) and launches `Release\Nexora-Setup.exe`.
+
+Release checklist: change `VERSION`, add the new section at the top of `CHANGELOG.md`, update "Document version" at the top of this file, then build.
+
 Installer (`Build\Installer\Nexora.iss`): modern wizard with brand images, license to accept, folder choice, optional desktop shortcut, Start menu, per-user installation without administrator rights (or "all users" by choice), registration in *Installed apps*, closing the app if running, English/Italian languages. Interactive uninstallation: asks whether to delete data (default **No**); silent: keeps them (`/DELETEDATA=1` to delete). IT parameters: `/VERYSILENT /CURRENTUSER|/ALLUSERS`.
 
 ## 7. Code signing and antivirus — KNOWN LIMIT, TO BE RESOLVED BEFORE SALE
@@ -94,7 +99,11 @@ Temporary internal workarounds: Defender exclusion for the install folder (requi
 ## 8. Verification status (Windows 11 Enterprise 26200, Windows PowerShell 5.1)
 | Verification | Outcome |
 |---|---|
-| Logic tests (55) and real-UI tests with screenshots (96) | Passed (22/11/2026) |
+| Logic tests (65) and real-UI tests with screenshots (133) | Passed (24/11/2026), source version 1.0.5 |
+| Compatibility with 1.0.4 data: files without `project`/`client`, files with projects but no clients, merge between folders, round trip on disk | Passed (automatic tests with synthetic files). A copy of the developer's real data folder also loaded without warnings, but it contained no tasks, so it proves nothing about task data |
+| Initial window width: all columns, Link included, visible without horizontal scrolling | Passed (UI test on `ScrollableWidth`) |
+| Collapsed sidebar: bottom icons not clipped; title tooltip hidden when the description is empty | Passed (UI tests and screenshots) |
+| Build and install of 1.0.5, `Build\UpdateInstaller.bat`, launch of the installed 1.0.5 | Not verified: the sources were tested, but the installer was not rebuilt and the `.bat` was not run |
 | "Support NEXORA" button (sidebar + About), `DonateButton` style and IT texts | Partial — presence and rendering verified (UI smoke 96/96 + modal About test); Ko-fi page opening **not yet tested with a click** |
 | `Nexora.exe` launch with no console or technical windows, single process, no child process | Verified (process/window list) |
 | NEXORA icon in title bar and taskbar, window title "NEXORA" | Verified (screenshot) |

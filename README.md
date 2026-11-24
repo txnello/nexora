@@ -21,8 +21,8 @@ NEXORA supports Windows 10 and Windows 11. To update, repeat the steps from the 
 ## Why NEXORA?
 
 - **Know what to focus on:** an automatic, configurable score ranks tasks by priority, deadline, reminders and age.
-- **Make it yours:** customize statuses, priority levels, owners, date format, colors and scoring weights.
-- **Keep work organized:** use search, filters, task history, reminders and optional links on tasks.
+- **Make it yours:** customize statuses, priority levels, clients, projects, owners, date format, colors and scoring weights.
+- **Keep work organized:** assign each task to a client, a project and an owner, then group, search and filter by any of them. Task history, reminders, completion dates and optional links are included.
 - **Stay in control of your data:** tasks and settings are stored locally on your PC. You can choose a different data folder and create or restore backups.
 - **For individuals and teams:** use it for personal work or internal business task management.
 
@@ -44,6 +44,10 @@ Donations are entirely optional. NEXORA remains free whether or not you donate.
    <img width="723" height="413" alt="Screenshot_3" src="https://github.com/user-attachments/assets/022c880e-a113-4aba-81cd-7e230869cd27" />
    <img width="724" height="414" alt="Screenshot_4" src="https://github.com/user-attachments/assets/34b132da-7eac-4fe9-a654-274a393dc12c" />
 </details>
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the list of changes in each version.
 
 ## License
 
@@ -72,8 +76,8 @@ NEXORA supporta Windows 10 e Windows 11. Per aggiornare, ripeti i passaggi dalla
 ## Perché NEXORA?
 
 - **Scopri su cosa concentrarti:** uno score automatico e personalizzabile ordina i task in base a priorità, scadenza, solleciti e anzianità.
-- **Adattala al tuo modo di lavorare:** personalizza stati, livelli di priorità, referenti, formato data, colori e pesi dello score.
-- **Tieni tutto organizzato:** ricerca, filtri, cronologia, solleciti e link facoltativi nei task.
+- **Adattala al tuo modo di lavorare:** personalizza stati, livelli di priorità, clienti, progetti, referenti, formato data, colori e pesi dello score.
+- **Tieni tutto organizzato:** assegna ogni task a un cliente, a un progetto e a un referente, poi raggruppa, cerca e filtra per ciascuno di essi. Includi cronologia, solleciti, date di completamento e link facoltativi.
 - **I dati restano sotto il tuo controllo:** task e impostazioni vengono salvati localmente sul PC. Puoi scegliere un’altra cartella dati e creare o ripristinare backup.
 - **Per singoli e team:** usala per il lavoro personale o per la gestione interna dei task aziendali.
 
@@ -95,6 +99,10 @@ Le donazioni sono del tutto facoltative. NEXORA resta gratuita anche senza donar
    <img width="723" height="413" alt="Screenshot_3" src="https://github.com/user-attachments/assets/022c880e-a113-4aba-81cd-7e230869cd27" />
    <img width="724" height="414" alt="Screenshot_4" src="https://github.com/user-attachments/assets/34b132da-7eac-4fe9-a654-274a393dc12c" />
 </details>
+
+## Changelog
+
+Consulta [CHANGELOG.md](CHANGELOG.md) per l’elenco delle modifiche di ogni versione.
 
 ## Licenza
 
