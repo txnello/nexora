@@ -308,6 +308,94 @@ Test-Case 'owners of existing tasks are imported into settings' {
     Assert-True ($null -ne ($st.Settings.referents | Where-Object { $_.name -ieq 'Legacy Owner' })) 'referente legacy non importato'
 }
 
+Write-Host 'Projects' -ForegroundColor Yellow
+Test-Case 'create, rename, reorder and validate projects' {
+    $p = Add-Project 'Website'
+    Assert-True ($null -ne (Get-ProjectById $p.id))
+    Update-Project $p.id 'Website 2'
+    Assert-Eq (Get-ProjectById $p.id).name 'Website 2'
+    Assert-Throws { Add-Project 'website 2' } 'nome progetto duplicato accettato'
+    Assert-Throws { Add-Project '   ' } 'nome progetto vuoto accettato'
+    Assert-Throws { Add-Project ('x' * 81) } 'nome progetto troppo lungo accettato'
+    $q = Add-Project 'Backoffice'
+    $before = $script:State.Settings.projects.IndexOf($q)
+    Move-Project $q.id -1
+    Assert-Eq $script:State.Settings.projects.IndexOf($q) ($before - 1)
+}
+Test-Case 'a task keeps its project through create, edit, status change, duplicate and reload' {
+    $p = Add-Project 'Roadmap'
+    $in = New-In 'PJ-1' 'con progetto'; $in.Project = 'Roadmap'
+    $t = Add-AppTask $in
+    Assert-Eq (Get-TaskById $t.id).project 'Roadmap'
+    # an input WITHOUT the Project key (older callers) must not wipe the project
+    $legacyIn = New-In 'PJ-1' 'titolo cambiato'
+    $null = Update-AppTask $t.id $legacyIn
+    Assert-Eq (Get-TaskById $t.id).project 'Roadmap' 'editing without Project key cleared the project'
+    $null = Set-AppTaskStatus $t.id 'doing'
+    Assert-Eq (Get-TaskById $t.id).project 'Roadmap' 'status change cleared the project'
+    $copy = Copy-AppTask $t.id
+    Assert-Eq $copy.project 'Roadmap' 'duplicate lost the project'
+    # explicit change is applied and logged in the history
+    $in2 = New-In 'PJ-1' 'titolo cambiato'; $in2.Project = ''
+    $null = Update-AppTask $t.id $in2
+    Assert-Eq (Get-TaskById $t.id).project ''
+    Assert-True ($script:State.History | Where-Object { $_.taskId -eq $t.id -and $_.text -like '*Roadmap*' }) 'project change not logged'
+    $in3 = New-In 'PJ-1' 'titolo cambiato'; $in3.Project = 'Roadmap'
+    $null = Update-AppTask $t.id $in3
+    $st = Reload-AppState
+    Assert-Eq (Get-TaskById $t.id).project 'Roadmap' 'project lost after reload from disk'
+    Assert-True ((Get-Content (Join-Path $tmp 'tasks.json') -Raw) -match '"project"\s*:\s*"Roadmap"') 'project not written to tasks.json'
+    Assert-True ($null -ne ($st.Settings.projects | Where-Object { $_.name -eq 'Roadmap' })) 'project not persisted in settings.json'
+}
+Test-Case 'renaming a project updates its tasks; deleting it keeps the tasks and clears the project' {
+    $p = Add-Project 'Temp Project'
+    $in = New-In 'PJ-2' 'task del progetto'; $in.Project = 'Temp Project'
+    $t = Add-AppTask $in
+    $count = $script:State.Tasks.Count
+    Update-Project $p.id 'Temp Renamed'
+    Assert-Eq (Get-TaskById $t.id).project 'Temp Renamed'
+    $removed = Remove-Project $p.id
+    Assert-Eq $removed.Moved 1
+    Assert-Eq $script:State.Tasks.Count $count 'deleting a project deleted tasks'
+    Assert-Eq (Get-TaskById $t.id).project '' 'task not moved to no project'
+    Assert-True ($null -eq (Get-ProjectById $p.id))
+}
+Test-Case 'projects used by tasks but missing from settings are imported on load' {
+    $in = New-In 'PJ-3' 'progetto orfano'; $in.Project = 'Orphan Project'
+    $null = Add-AppTask $in
+    $script:State.Settings.projects = ConvertTo-List @()
+    Save-Settings
+    $st = Reload-AppState
+    Assert-True ($null -ne ($st.Settings.projects | Where-Object { $_.name -ieq 'Orphan Project' })) 'progetto orfano non importato'
+}
+Test-Case 'files written by 1.0.4 (no project / projects keys) load as "no project" and stay intact' {
+    $d = Join-Path $tmp 'compat104'; New-Item -ItemType Directory -Force $d | Out-Null
+    $oldSettings = '{"version":1,"referents":[{"id":"rf1","name":"Ann"}],"statuses":[{"id":"todo","name":"To do","color":"#6B7280","isClosed":false},{"id":"done","name":"Done","color":"#10B981","isClosed":true}],"priorities":[{"id":"high","name":"High","value":3,"color":"#F97316"}],"language":"it","theme":"light","dateFormat":"dd/MM/yyyy","codePrefix":"DEV","nextCodeNumber":1002,"userName":"Ann","maxBackups":30,"openOnStartup":true,"hideOnClose":true,"preferencesVersion":2}'
+    $oldTasks = '{"version":1,"tasks":[{"id":"a1","code":"DEV-1","title":"Vecchio task","description":"d","referent":"Ann","link":"","statusId":"todo","priorityId":"high","createdAt":"2026-01-01T10:00:00","updatedAt":"2026-01-02T10:00:00","dueDate":"2026-02-01","reminders":2,"lastReminderAt":"2026-01-03T10:00:00","completedAt":null,"score":50}]}'
+    Set-Content (Join-Path $d 'settings.json') $oldSettings
+    Set-Content (Join-Path $d 'tasks.json') $oldTasks
+    try {
+        Initialize-Storage -DataPath $d
+        $st = Initialize-AppState
+        Assert-Eq $st.Warnings.Count 0 'warnings loading a 1.0.4 data folder'
+        Assert-Eq $st.Tasks.Count 1
+        Assert-Eq ([string]$st.Tasks[0].project) '' 'task without project must be "no project"'
+        Assert-Eq $st.Settings.projects.Count 0 'no projects expected in a 1.0.4 config'
+        Assert-Eq @(Get-Projects).Count 0
+        Assert-Eq $st.Tasks[0].title 'Vecchio task'; Assert-Eq $st.Tasks[0].reminders 2; Assert-Eq $st.Tasks[0].referent 'Ann'
+        Assert-Eq $st.Settings.userName 'Ann'; Assert-Eq $st.Settings.language 'it'; Assert-Eq $st.Settings.codePrefix 'DEV'
+        Assert-Eq $st.Settings.referents.Count 1
+        # still fully usable: edit without Project, then add a project and assign it
+        $in = New-In 'DEV-1' 'Vecchio task modificato' '2026-02-01' 'high' 'todo' 'Ann'
+        $null = Update-AppTask $st.Tasks[0].id $in
+        Assert-Eq ([string](Get-TaskById 'a1').project) ''
+        $p = Add-Project 'Nuovo'
+        $in.Project = 'Nuovo'; $null = Update-AppTask 'a1' $in
+        $st = Reload-AppState
+        Assert-Eq (Get-TaskById 'a1').project 'Nuovo'
+    } finally { Initialize-Storage -DataPath $tmp; $null = Initialize-AppState }
+}
+
 Write-Host 'Backup, restore, robustness' -ForegroundColor Yellow
 Test-Case 'full backup export and import (restore)' {
     $n = $script:State.Tasks.Count
@@ -457,8 +545,10 @@ Test-Case 'data folder switch protects existing data, copies current data, and p
         $script:State.Settings.statuses.Add([pscustomobject]@{ id = 'shared-status'; name = 'Status B'; color = '#3B82F6'; isClosed = $false })
         $script:State.Settings.priorities.Add([pscustomobject]@{ id = 'shared-priority'; name = 'Priority B'; value = 5; color = '#3B82F6' })
         $script:State.Settings.referents.Add([pscustomobject]@{ id = 'shared-owner'; name = 'Owner B' })
+        $script:State.Settings.projects.Add([pscustomobject]@{ id = 'shared-project'; name = 'Project B' })
         Save-Settings
         $targetMergeTask = Add-AppTask (New-In 'MERGE-COLLISION' 'Task B' $null 'shared-priority' 'shared-status' 'Owner B')
+        $targetMergeTask.project = 'Project B'
         $targetMergeTaskOldId = $targetMergeTask.id
         $targetMergeTask.id = 'shared-task-id'
         foreach ($entry in $script:State.History | Where-Object taskId -eq $targetMergeTaskOldId) { $entry.taskId = 'shared-task-id' }
@@ -469,10 +559,12 @@ Test-Case 'data folder switch protects existing data, copies current data, and p
         $script:State.Settings.statuses.Add([pscustomobject]@{ id = 'shared-status'; name = 'Status A'; color = '#10B981'; isClosed = $false })
         $script:State.Settings.priorities.Add([pscustomobject]@{ id = 'shared-priority'; name = 'Priority A'; value = 6; color = '#10B981' })
         $script:State.Settings.referents.Add([pscustomobject]@{ id = 'shared-owner'; name = 'Owner A' })
+        $script:State.Settings.projects.Add([pscustomobject]@{ id = 'shared-project'; name = 'Project A' })
         $script:State.Settings.language = 'it'
         Convert-DefaultNames $script:State.Settings 'it'
         Save-Settings
         $sourceMergeTask = Add-AppTask (New-In 'MERGE-COLLISION' 'Task A' $null 'shared-priority' 'shared-status' 'Owner A')
+        $sourceMergeTask.project = 'Project A'
         $sourceMergeTaskOldId = $sourceMergeTask.id
         $sourceMergeTask.id = 'shared-task-id'
         foreach ($entry in $script:State.History | Where-Object taskId -eq $sourceMergeTaskOldId) { $entry.taskId = 'shared-task-id' }
@@ -494,6 +586,10 @@ Test-Case 'data folder switch protects existing data, copies current data, and p
         Assert-Eq (Get-PriorityById $taskB.priorityId).name 'Priority B' 'destination task priority changed'
         Assert-True ($script:State.Settings.referents | Where-Object name -eq 'Owner A') 'source owner missing after merge'
         Assert-True ($script:State.Settings.referents | Where-Object name -eq 'Owner B') 'destination owner missing after merge'
+        Assert-True ($script:State.Settings.projects | Where-Object name -eq 'Project A') 'source project missing after merge'
+        Assert-True ($script:State.Settings.projects | Where-Object name -eq 'Project B') 'destination project missing after merge'
+        Assert-Eq $taskA.project 'Project A' 'source task project lost in merge'
+        Assert-Eq $taskB.project 'Project B' 'destination task project lost in merge'
         Assert-True ($script:State.History | Where-Object { $_.taskId -eq $taskA.id }) 'source task history was not remapped'
         Assert-True ($script:State.History | Where-Object { $_.taskId -eq $taskB.id }) 'destination task history missing'
         Assert-True (Test-Path (Join-Path $merge 'Nexora-data-backup-*')) 'destination data was not backed up before merge'

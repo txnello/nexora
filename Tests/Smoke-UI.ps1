@@ -119,7 +119,7 @@ $w.Height = 820
 $u = $script:Ui
 $steps = New-Object System.Collections.Generic.Queue[scriptblock]
 $steps.Enqueue({
-    Check 'larghezza iniziale include la colonna di selezione' ($defaultWindowWidth -eq 1450) "larghezza=$defaultWindowWidth"
+    Check 'larghezza iniziale include la colonna di selezione' ($defaultWindowWidth -eq 1520) "larghezza=$defaultWindowWidth"
     $rows = @($u.grid.ItemsSource)
     Check 'dashboard: solo task aperti' ($rows.Count -eq 7) "righe=$($rows.Count)"
     $scores = @($u.grid.Items | ForEach-Object { $_.ScoreValue })
@@ -236,6 +236,8 @@ $steps.Enqueue({
 $steps.Enqueue({
     $codes = @($u.grid.Items | ForEach-Object { $_.Code })
     Check 'ordinamento manuale persiste al refresh' ($codes[0] -eq 'DEV-1001') ($codes -join ',')
+    $gridScroll = Find-VisualChild $u.grid ([System.Windows.Controls.ScrollViewer])
+    Check 'larghezza iniziale: tutte le colonne (Link incluso) visibili senza scorrimento orizzontale' ($null -ne $gridScroll -and $gridScroll.ScrollableWidth -lt 1) "scorrimento=$($gridScroll.ScrollableWidth)"
     Shot '02-all-dark'
     $u.navMine.IsChecked = $true
 })
@@ -328,6 +330,11 @@ $steps.Enqueue({
     Check 'referente non modificabile in linea' (-not $n.cmbReferent.IsEditable)
     $n.cmbReferent.SelectedIndex = $n.cmbReferent.Items.Count - 1
     Check 'creazione referente dal menu del task' ($n.cmbReferent.SelectedItem.value -eq 'Referente creato dal task' -and $n.txtTitle.Text -eq 'Task creato dal test UI') $n.cmbReferent.SelectedItem.name
+    Check 'progetto: (nessun progetto) disponibile e preselezionato' ($null -ne ($n.cmbProject.Items | Where-Object { -not $_.IsCreateAction -and $_.value -eq '' }) -and $n.cmbProject.SelectedItem.value -eq '')
+    Check 'progetto non modificabile in linea' (-not $n.cmbProject.IsEditable)
+    Queue-ItemDialogSave 'Progetto creato dal task'
+    $n.cmbProject.SelectedIndex = $n.cmbProject.Items.Count - 1
+    Check 'creazione progetto dal menu del task' ($n.cmbProject.SelectedItem.value -eq 'Progetto creato dal task' -and $n.txtTitle.Text -eq 'Task creato dal test UI') $n.cmbProject.SelectedItem.name
     $n.txtDue.Text = (Get-Date).ToString('dd/MM/yyyy')
     Save-TaskDialog
 })
@@ -336,6 +343,25 @@ $steps.Enqueue({
     $createdTask = $script:State.Tasks | Where-Object { $_.title -eq 'Task creato dal test UI' } | Select-Object -First 1
     Check 'nuovo task dal dialogo' ($null -ne $createdTask)
     Check 'referente selezionato salvato nel task' ($createdTask.referent -eq 'Referente creato dal task') $createdTask.referent
+    Check 'progetto selezionato salvato nel task' ($createdTask.project -eq 'Progetto creato dal task') $createdTask.project
+    Check 'altri task restano senza progetto' (@($script:State.Tasks | Where-Object { -not $_.project }).Count -eq ($script:State.Tasks.Count - 1))
+    $projRow = $u.grid.Items | Where-Object { $_.Id -eq $createdTask.id } | Select-Object -First 1
+    $otherRow = $u.grid.Items | Where-Object { $_.Id -ne $createdTask.id } | Select-Object -First 1
+    Check 'riga mostra il progetto, le altre il trattino' ($projRow.Project -eq 'Progetto creato dal task' -and $otherRow.Project -eq '—') "$($projRow.Project) / $($otherRow.Project)"
+    Check 'filtro progetti: tutte le voci + il progetto creato' ($u.cmbProject.Items.Count -eq 2 -and $u.cmbProject.Items[1].name -eq 'Progetto creato dal task')
+    $u.cmbProject.SelectedIndex = 1
+    Check 'filtro per progetto mostra solo i task del progetto' ($u.grid.Items.Count -eq 1 -and $u.grid.Items[0].Id -eq $createdTask.id) "righe=$($u.grid.Items.Count)"
+    $u.btnClear.RaiseEvent((New-Object System.Windows.RoutedEventArgs([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)))
+    Check 'Clear azzera anche il filtro progetto' ($u.cmbProject.SelectedIndex -eq 0 -and $u.grid.Items.Count -gt 1)
+    $u.txtSearch.Text = 'Progetto creato'
+    Check 'la ricerca trova anche per progetto' ($u.grid.Items.Count -eq 1) "righe=$($u.grid.Items.Count)"
+    $u.txtSearch.Text = ''
+    $u.navByProject.IsChecked = $true
+    Check 'vista Per progetto: raggruppata per progetto, icona cartella' ($u.grid.Items.Groups.Count -eq 2 -and $u.grid.Tag -eq [string][char]0xE8B7 -and $u.grid.Columns[$script:ColProject].Visibility -eq 'Collapsed') "gruppi=$($u.grid.Items.Groups.Count)"
+    $groupNames = @($u.grid.Items.Groups | ForEach-Object { $_.Name })
+    Check 'vista Per progetto: gruppo (senza progetto) e gruppo del progetto' ($groupNames -contains 'Progetto creato dal task' -and $groupNames -contains (T '(no project)')) ($groupNames -join ', ')
+    $u.navByRef.IsChecked = $true
+    Check 'vista Per referente: icona persona ripristinata' ($u.grid.Tag -eq [string][char]0xE77B)
     Check 'link del nuovo task salvato e visibile nella riga' ($createdTask.link -eq 'https://example.test/new-task' -and ($u.grid.Items | Where-Object { $_.Id -eq $createdTask.id }).Link -eq $createdTask.link) $createdTask.link
     $script:OpenedTaskLink = ''
     $linkRow = $u.grid.Items | Where-Object { $_.Id -eq $createdTask.id } | Select-Object -First 1
@@ -363,6 +389,7 @@ $steps.Enqueue({
 })
 $steps.Enqueue({
     Shot '06-settings-dark'
+    Check 'Impostazioni: elenco progetti con il progetto creato' (@($u.lstProjects.ItemsSource | Where-Object { $_.name -eq 'Progetto creato dal task' }).Count -eq 1)
     Check 'data-folder controls visible with copy enabled by default' ($u.chkMoveData.IsChecked -and $u.btnChangeDataFolder.Content -eq 'Change data folder…' -and $u.txtDataPath.Text -like '*tasks.json*')
     $folderChoice = Import-Xaml 'DataFolderChoiceDialog.xaml'
     $folderChoiceButtons = Get-Named $folderChoice 'folderChoiceOverwrite', 'folderChoiceKeep', 'folderChoiceMerge', 'folderChoiceCancel'

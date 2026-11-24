@@ -40,6 +40,14 @@
         <Grid Margin="0,14,0,0">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <StackPanel>
+            <TextBlock Text="Project" Style="{StaticResource FieldLabel}"/>
+            <ComboBox x:Name="cmbProject" IsEditable="False">
+              <ComboBox.ItemTemplate><DataTemplate>
+                <TextBlock Text="{Binding name}"/>
+              </DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+          <StackPanel Grid.Column="2">
             <TextBlock Text="Owner" Style="{StaticResource FieldLabel}"/>
             <ComboBox x:Name="cmbReferent" IsEditable="False">
               <ComboBox.ItemTemplate><DataTemplate>
@@ -47,9 +55,23 @@
               </DataTemplate></ComboBox.ItemTemplate>
             </ComboBox>
           </StackPanel>
-          <StackPanel Grid.Column="2">
+        </Grid>
+
+        <Grid Margin="0,14,0,0">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <StackPanel>
             <TextBlock Text="Status *" Style="{StaticResource FieldLabel}"/>
             <ComboBox x:Name="cmbStatus">
+              <ComboBox.ItemTemplate><DataTemplate>
+                <StackPanel Orientation="Horizontal">
+                  <Ellipse Width="9" Height="9" Fill="{Binding color}" Margin="0,1,9,0"/><TextBlock Text="{Binding name}"/>
+                </StackPanel>
+              </DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+          <StackPanel Grid.Column="2">
+            <TextBlock Text="Manual priority *" Style="{StaticResource FieldLabel}"/>
+            <ComboBox x:Name="cmbPriority">
               <ComboBox.ItemTemplate><DataTemplate>
                 <StackPanel Orientation="Horizontal">
                   <Ellipse Width="9" Height="9" Fill="{Binding color}" Margin="0,1,9,0"/><TextBlock Text="{Binding name}"/>
@@ -62,16 +84,6 @@
         <Grid Margin="0,14,0,0">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <StackPanel>
-            <TextBlock Text="Manual priority *" Style="{StaticResource FieldLabel}"/>
-            <ComboBox x:Name="cmbPriority">
-              <ComboBox.ItemTemplate><DataTemplate>
-                <StackPanel Orientation="Horizontal">
-                  <Ellipse Width="9" Height="9" Fill="{Binding color}" Margin="0,1,9,0"/><TextBlock Text="{Binding name}"/>
-                </StackPanel>
-              </DataTemplate></ComboBox.ItemTemplate>
-            </ComboBox>
-          </StackPanel>
-          <StackPanel Grid.Column="2">
             <TextBlock Text="Due date" Style="{StaticResource FieldLabel}"/>
             <Grid>
               <TextBox x:Name="txtDue" Padding="10,7,38,7"/>

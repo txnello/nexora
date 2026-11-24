@@ -1,6 +1,6 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="NEXORA" Width="1450" Height="820" MinWidth="780" MinHeight="540"
+        Title="NEXORA" Width="1520" Height="820" MinWidth="780" MinHeight="540"
         WindowStartupLocation="CenterScreen" SnapsToDevicePixels="True">
   <Grid>
     <Grid>
@@ -50,6 +50,9 @@
             </RadioButton>
             <RadioButton x:Name="navByRef" Style="{StaticResource NavButton}" GroupName="nav" ToolTip="By owner">
               <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE716;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="26" TextAlignment="Center" VerticalAlignment="Center"/><TextBlock x:Name="lblByRef" Text="By owner" VerticalAlignment="Center" Margin="8,0,0,0"/></StackPanel>
+            </RadioButton>
+            <RadioButton x:Name="navByProject" Style="{StaticResource NavButton}" GroupName="nav" ToolTip="By project">
+              <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8B7;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="26" TextAlignment="Center" VerticalAlignment="Center"/><TextBlock x:Name="lblByProject" Text="By project" VerticalAlignment="Center" Margin="8,0,0,0"/></StackPanel>
             </RadioButton>
             <RadioButton x:Name="navDone" Style="{StaticResource NavButton}" GroupName="nav" ToolTip="Completed">
               <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE930;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="26" TextAlignment="Center" VerticalAlignment="Center"/><TextBlock x:Name="lblDone" Text="Completed" VerticalAlignment="Center" Margin="8,0,0,0"/></StackPanel>
@@ -125,12 +128,13 @@
         <!-- Filters and actions -->
         <WrapPanel x:Name="filterPanel" Grid.Row="2" Margin="0,0,0,12">
           <Grid Width="260" Margin="0,0,10,8">
-            <TextBox x:Name="txtSearch" Padding="34,8,10,8" ToolTip="Search by code, title or owner (Ctrl+F)"/>
+            <TextBox x:Name="txtSearch" Padding="34,8,10,8" ToolTip="Search by code, title, project or owner (Ctrl+F)"/>
             <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource MutedBrush}" Margin="12,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
-            <TextBlock x:Name="searchHint" Text="Search code, title, owner…" Style="{StaticResource Muted}" Margin="34,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
+            <TextBlock x:Name="searchHint" Text="Search code, title, project, owner…" Style="{StaticResource Muted}" Margin="34,0,0,0" VerticalAlignment="Center" IsHitTestVisible="False"/>
           </Grid>
           <ComboBox x:Name="cmbStatus" Width="160" Margin="0,0,10,8" ItemTemplate="{StaticResource NameTemplate}" ToolTip="Filter by status"/>
           <ComboBox x:Name="cmbPriority" Width="150" Margin="0,0,10,8" ItemTemplate="{StaticResource NameTemplate}" ToolTip="Filter by priority"/>
+          <ComboBox x:Name="cmbProject" Width="170" Margin="0,0,10,8" ItemTemplate="{StaticResource NameTemplate}" ToolTip="Filter by project"/>
           <ComboBox x:Name="cmbReferent" Width="170" Margin="0,0,10,8" ItemTemplate="{StaticResource NameTemplate}" ToolTip="Filter by owner"/>
           <Button x:Name="btnClear" Style="{StaticResource GhostButton}" Margin="0,0,16,8" ToolTip="Clear all filters">
             <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE711;" FontFamily="{StaticResource IconFont}" Margin="0,1,6,0" VerticalAlignment="Center"/><TextBlock Text="Clear"/></StackPanel>
@@ -157,14 +161,14 @@
                          Background="{DynamicResource SelectBrush}"/>
               <DataGrid x:Name="grid" AutoGenerateColumns="False" IsReadOnly="True" CanUserAddRows="False" CanUserDeleteRows="False"
                         SelectionMode="Single" CanUserResizeRows="False" CanUserReorderColumns="True" RowHeaderWidth="0"
-                        EnableRowVirtualization="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        EnableRowVirtualization="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Tag="&#xE77B;">
                 <DataGrid.GroupStyle>
                   <GroupStyle>
                     <GroupStyle.HeaderTemplate>
                       <DataTemplate>
                         <Border Background="{DynamicResource Surface2Brush}" Padding="16,8" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1">
                           <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE77B;" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource AccentBrush}" Margin="0,2,8,0"/>
+                            <TextBlock Text="{Binding Tag, RelativeSource={RelativeSource AncestorType=DataGrid}}" FontFamily="{StaticResource IconFont}" Foreground="{DynamicResource AccentBrush}" Margin="0,2,8,0"/>
                             <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
                             <TextBlock Text="{Binding ItemCount, StringFormat=' · {0}'}" Style="{StaticResource Muted}"/>
                           </StackPanel>
@@ -199,6 +203,11 @@
                           </TextBlock.Resources>
                         </TextBlock>
                       </StackPanel>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
+                  <DataGridTemplateColumn x:Name="colProject" Header="PROJECT" Width="110" MinWidth="100" SortMemberPath="Project">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <TextBlock Text="{Binding Project}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                     </DataTemplate></DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
                   <DataGridTemplateColumn x:Name="colReferent" Header="OWNER" Width="130" MinWidth="110" SortMemberPath="Referent">
@@ -344,6 +353,36 @@
                   <Button x:Name="btnPrAdd" Content="New level" Style="{StaticResource PrimaryButton}" Margin="0,0,0,6"/>
                   <Button x:Name="btnPrEdit" Content="Edit" Margin="0,0,0,6"/>
                   <Button x:Name="btnPrDel" Content="Delete"/>
+                </StackPanel>
+              </Grid>
+            </Border>
+
+            <!-- Projects -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                  <TextBlock Text="Projects" Style="{StaticResource SectionTitle}"/>
+                  <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12"
+                             Text="Create, edit, reorder or delete the projects tasks belong to. Deleting a project never deletes its tasks."/>
+                  <ListBox x:Name="lstProjects" Height="170">
+                    <ListBox.ItemTemplate><DataTemplate>
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE8B7;" FontFamily="{StaticResource IconFont}" Margin="0,0,12,0" Opacity="0.75"/>
+                        <TextBlock Grid.Column="1" Text="{Binding name}"/>
+                      </Grid>
+                    </DataTemplate></ListBox.ItemTemplate>
+                  </ListBox>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Bottom" Width="120">
+                  <Button x:Name="btnPjAdd" Content="New project" Style="{StaticResource PrimaryButton}" Margin="0,0,0,6"/>
+                  <Button x:Name="btnPjEdit" Content="Edit" Margin="0,0,0,6"/>
+                  <Button x:Name="btnPjDel" Content="Delete" Margin="0,0,0,6"/>
+                  <UniformGrid Columns="2">
+                    <Button x:Name="btnPjUp" Margin="0,0,3,0" ToolTip="Move up"><TextBlock Text="&#xE70E;" FontFamily="{StaticResource IconFont}"/></Button>
+                    <Button x:Name="btnPjDown" Margin="3,0,0,0" ToolTip="Move down"><TextBlock Text="&#xE70D;" FontFamily="{StaticResource IconFont}"/></Button>
+                  </UniformGrid>
                 </StackPanel>
               </Grid>
             </Border>

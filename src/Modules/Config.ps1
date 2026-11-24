@@ -31,6 +31,7 @@ function Get-DefaultSettings {
     [pscustomobject]@{
         version        = 1
         referents      = ConvertTo-List @()
+        projects       = ConvertTo-List @()
         statuses       = ConvertTo-List @(
             [pscustomobject]@{ id = 'todo';    name = 'To do';        color = '#6B7280'; isClosed = $false }
             [pscustomobject]@{ id = 'doing';   name = 'In progress'; color = '#3B82F6'; isClosed = $false }
@@ -107,6 +108,19 @@ function Repair-Settings {
         $refs.Add([pscustomobject]@{ id = $id; name = $name })
     }
     $d.referents = $refs
+
+    # configurable projects (optional: settings written by versions before 1.0.5 have no 'projects' key -> empty list)
+    $projs = New-Object 'System.Collections.Generic.List[psobject]'
+    $seenProjs = @{}
+    foreach ($p in @(Get-Prop $Raw 'projects' @())) {
+        $name = ([string](Get-Prop $p 'name' '')).Trim()
+        if ($name -eq '' -or $seenProjs.ContainsKey($name.ToLowerInvariant())) { continue }
+        $seenProjs[$name.ToLowerInvariant()] = $true
+        $id = [string](Get-Prop $p 'id' '')
+        if ($id -eq '') { $id = 'pj' + (New-Id).Substring(0, 8) }
+        $projs.Add([pscustomobject]@{ id = $id; name = $name })
+    }
+    $d.projects = $projs
 
     # statuses
     $st = New-Object 'System.Collections.Generic.List[psobject]'
@@ -213,6 +227,7 @@ function Format-DueHint {
 function Get-StatusById { param($Id) $script:State.Settings.statuses | Where-Object { $_.id -eq $Id } | Select-Object -First 1 }
 function Get-PriorityById { param($Id) $script:State.Settings.priorities | Where-Object { $_.id -eq $Id } | Select-Object -First 1 }
 function Get-ReferentById { param($Id) $script:State.Settings.referents | Where-Object { $_.id -eq $Id } | Select-Object -First 1 }
+function Get-ProjectById { param($Id) $script:State.Settings.projects | Where-Object { $_.id -eq $Id } | Select-Object -First 1 }
 
 function Assert-ValidName {
     param([string]$Name, $List, [string]$ExceptId, [string]$Kind)
@@ -355,6 +370,68 @@ function Move-Referent {
     $i = $refs.IndexOf($r); $j = $i + $Direction
     if ($j -lt 0 -or $j -ge $refs.Count) { return }
     $refs.RemoveAt($i); $refs.Insert($j, $r)
+    Save-Settings
+}
+
+# ------------------------------------------------------------------ Projects
+# Same model as the owners: the list lives in settings.projects, tasks store the project NAME in task.project
+# (empty string = no project). Deleting a project never deletes tasks: they go back to "no project".
+
+function Assert-ValidProjectName {
+    param([string]$Name, [string]$ExceptId = '')
+    $n = $Name.Trim()
+    if ($n.Length -eq 0) { throw (T 'The name is required.') }
+    if ($n.Length -gt 80) { throw (T 'The project cannot exceed 80 characters.') }
+    if ($script:State.Settings.projects | Where-Object { $_.id -ne $ExceptId -and $_.name -ieq $n }) {
+        throw (T 'A project named "{0}" already exists.' $n)
+    }
+}
+
+function Add-Project {
+    param([string]$Name)
+    Assert-ValidProjectName $Name
+    $p = [pscustomobject]@{ id = 'pj' + (New-Id).Substring(0, 8); name = $Name.Trim() }
+    $script:State.Settings.projects.Add($p)
+    Save-Settings
+    return $p
+}
+
+function Update-Project {
+    param([string]$Id, [string]$Name)
+    $p = Get-ProjectById $Id
+    if ($null -eq $p) { throw (T 'Project not found.') }
+    Assert-ValidProjectName $Name $Id
+    $oldName = $p.name
+    $p.name = $Name.Trim()
+    foreach ($t in $script:State.Tasks) {
+        if ($t.project -ieq $oldName) { $t.project = $p.name }
+    }
+    Save-Settings; Save-Tasks
+}
+
+function Remove-Project {
+    param([string]$Id)
+    $projs = $script:State.Settings.projects
+    $p = Get-ProjectById $Id
+    if ($null -eq $p) { throw (T 'Project not found.') }
+    New-Snapshot -Reason 'pre-delete-project' | Out-Null
+    $moved = 0
+    foreach ($t in $script:State.Tasks) {
+        if ($t.project -ieq $p.name) { $t.project = ''; $moved++ }
+    }
+    [void]$projs.Remove($p)
+    Save-Settings; Save-Tasks
+    return [pscustomobject]@{ Moved = $moved }
+}
+
+function Move-Project {
+    param([string]$Id, [int]$Direction)
+    $projs = $script:State.Settings.projects
+    $p = Get-ProjectById $Id
+    if ($null -eq $p) { return }
+    $i = $projs.IndexOf($p); $j = $i + $Direction
+    if ($j -lt 0 -or $j -ge $projs.Count) { return }
+    $projs.RemoveAt($i); $projs.Insert($j, $p)
     Save-Settings
 }
 

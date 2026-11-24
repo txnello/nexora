@@ -217,11 +217,21 @@ function Get-MergedAppDataState {
         $targetSettings.referents.Add([pscustomobject]@{ id = $id; name = $item.name })
     }
 
+    $usedProjectIds = @{}
+    foreach ($item in $targetSettings.projects) { $usedProjectIds[[string]$item.id] = $true }
+    foreach ($item in $sourceSettings.projects) {
+        if ($targetSettings.projects | Where-Object { $_.name -ieq $item.name }) { continue }
+        $id = [string]$item.id
+        if ($usedProjectIds.ContainsKey($id)) { $id = Get-MergeUniqueId $usedProjectIds }
+        else { $usedProjectIds[$id] = $true }
+        $targetSettings.projects.Add([pscustomobject]@{ id = $id; name = $item.name })
+    }
+
     $sourceRawTasks = New-Object 'System.Collections.Generic.List[psobject]'
     foreach ($task in $script:State.Tasks) {
         $sourceRawTasks.Add([pscustomobject]@{
             id = $task.id; code = $task.code; title = $task.title; description = $task.description
-            referent = $task.referent; link = $task.link; statusId = $statusIds[[string]$task.statusId]
+            referent = $task.referent; project = $task.project; link = $task.link; statusId = $statusIds[[string]$task.statusId]
             priorityId = $priorityIds[[string]$task.priorityId]; createdAt = $task.createdAt
             updatedAt = $task.updatedAt; dueDate = $task.dueDate; reminders = $task.reminders
             lastReminderAt = $task.lastReminderAt; completedAt = $task.completedAt
@@ -233,6 +243,11 @@ function Get-MergedAppDataState {
         $ownerName = ([string]$task.referent).Trim()
         if (-not $ownerName -or ($targetSettings.referents | Where-Object { $_.name -ieq $ownerName })) { continue }
         $targetSettings.referents.Add([pscustomobject]@{ id = (Get-MergeUniqueId $usedReferentIds); name = $ownerName })
+    }
+    foreach ($task in @($targetTasks) + @($sourceTasks)) {
+        $projectName = ([string]$task.project).Trim()
+        if (-not $projectName -or ($targetSettings.projects | Where-Object { $_.name -ieq $projectName })) { continue }
+        $targetSettings.projects.Add([pscustomobject]@{ id = (Get-MergeUniqueId $usedProjectIds); name = $projectName })
     }
 
     $usedTaskIds = @{}
