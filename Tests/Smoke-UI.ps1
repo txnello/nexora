@@ -236,6 +236,10 @@ $steps.Enqueue({
 $steps.Enqueue({
     $codes = @($u.grid.Items | ForEach-Object { $_.Code })
     Check 'ordinamento manuale persiste al refresh' ($codes[0] -eq 'DEV-1001') ($codes -join ',')
+    $noDescRow = $u.grid.Items | Where-Object { $_.Code -eq 'HR-12' } | Select-Object -First 1
+    $descRow = $u.grid.Items | Where-Object { $_.Code -eq 'DEV-1025' } | Select-Object -First 1
+    Check 'tooltip titolo: nessuna descrizione -> nessun tooltip (non un riquadro vuoto)' ($null -ne $noDescRow -and $null -eq $noDescRow.Description)
+    Check 'tooltip titolo: con descrizione mostra il testo' ($null -ne $descRow -and $descRow.Description -eq 'Aggiungere gli endpoint v2')
     $gridScroll = Find-VisualChild $u.grid ([System.Windows.Controls.ScrollViewer])
     Check 'larghezza iniziale: tutte le colonne (Link incluso) visibili senza scorrimento orizzontale' ($null -ne $gridScroll -and $gridScroll.ScrollableWidth -lt 1) "scorrimento=$($gridScroll.ScrollableWidth)"
     Shot '02-all-dark'

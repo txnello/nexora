@@ -79,7 +79,11 @@ function New-TaskRow {
     $r = New-Object TaskRow
     $stt = $ctx.Status[$t.statusId]; $prr = $ctx.Prio[$t.priorityId]
     $closed = ($null -ne $stt -and [bool]$stt.isClosed)
-    $r.Id = $t.id; $r.Code = $t.code; $r.Title = $t.title; $r.Description = $t.description; $r.Link = [string]$t.link
+    $r.Id = $t.id; $r.Code = $t.code; $r.Title = $t.title
+    # the title tooltip shows the description: with no text it must be a real null (an empty string still draws an empty box).
+    # PowerShell turns $null into "" when assigning to a string property, hence [NullString]::Value
+    $r.Description = $(if ([string]::IsNullOrWhiteSpace([string]$t.description)) { [NullString]::Value } else { [string]$t.description })
+    $r.Link = [string]$t.link
     $r.LinkCommand = $script:OpenTaskLinkCommand
     $first = ([string]$t.description -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -First 1)
     if ($first -and $first.Length -gt 110) { $first = $first.Substring(0, 110) + '…' }
