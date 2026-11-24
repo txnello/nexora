@@ -28,7 +28,7 @@ $script:MainNames = @(
 
 # table columns (indices)
 $script:ColBulk = 0; $script:ColCode = 1; $script:ColTitle = 2; $script:ColReferent = 3; $script:ColStatus = 4
-$script:ColPriority = 5; $script:ColDue = 6; $script:ColReminders = 7; $script:ColScore = 8; $script:ColLink = 9
+$script:ColPriority = 5; $script:ColDue = 6; $script:ColReminders = 7; $script:ColScore = 8; $script:ColCompleted = 9; $script:ColLink = 10
 
 # ------------------------------------------------------------------ Utilities
 
@@ -110,6 +110,10 @@ function New-TaskRow {
     $r.ClosedRank = $(if ($closed) { 1 } else { 0 })
     $upd = ConvertTo-DateTimeValue $t.updatedAt
     $r.UpdatedSort = $(if ($upd) { $upd } else { [datetime]::MinValue })
+    $cmp = ConvertTo-DateTimeValue $t.completedAt
+    if ($closed -and $cmp) {
+        $r.CompletedText = $cmp.ToString(($s.dateFormat + ' HH:mm'), $script:UiCulture); $r.CompletedSort = $cmp
+    } else { $r.CompletedText = '—'; $r.CompletedSort = [datetime]::MinValue }
     $r.RowState = $(if ($closed) { 'closed' } elseif ($r.IsOverdue) { 'overdue' } elseif ($r.IsUrgent) { 'urgent' } else { 'normal' })
     return $r
 }
@@ -175,7 +179,9 @@ function Set-GridSort {
         return
     }
     if ($script:View -eq 'done') {
+        $items.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription('CompletedSort', $desc)))
         $items.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription('UpdatedSort', $desc)))
+        $u.grid.Columns[$script:ColCompleted].SortDirection = $desc
         return
     }
     if ($script:View -eq 'byref') { $items.SortDescriptions.Add((New-Object System.ComponentModel.SortDescription('Group', $asc))) }
@@ -321,6 +327,7 @@ function Update-Layout {
     $cols[$script:ColReferent].Visibility = $(if ($w -lt 1180 -or $script:View -eq 'byref') { 'Collapsed' } else { 'Visible' })
     $cols[$script:ColReminders].Visibility = $(if ($w -lt 1050) { 'Collapsed' } else { 'Visible' })
     $cols[$script:ColScore].Visibility = $(if ($script:View -eq 'done') { 'Collapsed' } else { 'Visible' })
+    $cols[$script:ColCompleted].Visibility = $(if ($script:View -eq 'done') { 'Visible' } else { 'Collapsed' })
     $cols[$script:ColPriority].Visibility = $(if ($w -lt 880) { 'Collapsed' } else { 'Visible' })
 }
 

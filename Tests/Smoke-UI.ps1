@@ -255,7 +255,14 @@ $steps.Enqueue({
 })
 $steps.Enqueue({
     Check 'completati: 2 righe' ($u.grid.Items.Count -eq 2) "righe=$($u.grid.Items.Count)"
+    $ccol = $u.grid.Columns[$script:ColCompleted]
+    Check 'completati: colonna data di completamento visibile' ($ccol.Visibility -eq 'Visible')
+    Check 'completati: ordinamento di default per data di completamento decrescente' ($ccol.SortDirection -eq 'Descending' -and $u.grid.Items.SortDescriptions[0].PropertyName -eq 'CompletedSort')
+    Check 'completati: date di completamento valorizzate e in ordine decrescente' ($u.grid.Items[0].CompletedText -ne '—' -and $u.grid.Items[0].CompletedSort -ge $u.grid.Items[1].CompletedSort)
     $u.navDashboard.IsChecked = $true
+})
+$steps.Enqueue({
+    Check 'colonna data di completamento nascosta fuori da Completati' ($u.grid.Columns[$script:ColCompleted].Visibility -eq 'Collapsed')
 })
 $steps.Enqueue({
     # selection + quick reminder

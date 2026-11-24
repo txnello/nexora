@@ -40,6 +40,8 @@ public class TaskRow
     public string RowState { get; set; }
     public int ClosedRank { get; set; }
     public DateTime UpdatedSort { get; set; }
+    public string CompletedText { get; set; }
+    public DateTime CompletedSort { get; set; }
 }
 
 namespace Stm

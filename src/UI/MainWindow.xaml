@@ -250,6 +250,11 @@
                       </StackPanel>
                     </DataTemplate></DataGridTemplateColumn.CellTemplate>
                   </DataGridTemplateColumn>
+                  <DataGridTemplateColumn x:Name="colCompleted" Header="COMPLETED ON" Width="132" MinWidth="132" SortMemberPath="CompletedSort" Visibility="Collapsed">
+                    <DataGridTemplateColumn.CellTemplate><DataTemplate>
+                      <TextBlock Text="{Binding CompletedText}" VerticalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
+                    </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                  </DataGridTemplateColumn>
                   <DataGridTemplateColumn x:Name="colLink" Header="LINK" Width="72" MinWidth="72" CanUserSort="False">
                     <DataGridTemplateColumn.CellTemplate><DataTemplate>
                       <Button Command="{Binding LinkCommand}" CommandParameter="{Binding Link}"
