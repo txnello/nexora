@@ -323,6 +323,9 @@ function Update-Layout {
     $u.colSide.Width = New-Object System.Windows.GridLength($(if ($compact) { 74 } else { 236 }))
     $vis = $(if ($compact) { 'Collapsed' } else { 'Visible' })
     foreach ($l in 'txtBrand', 'lblAbout', 'lblDonate', 'lblTheme', 'lblDashboard', 'lblAll', 'lblMine', 'lblByRef', 'lblDone', 'lblSettings') { $u[$l].Visibility = $vis }
+    # bottom buttons: in compact mode drop the horizontal padding so the 26px icon fits (and centres) in the narrow sidebar
+    $pad = $(if ($compact) { New-Object System.Windows.Thickness(0, 8, 0, 8) } else { New-Object System.Windows.Thickness(14, 8, 14, 8) })
+    foreach ($b in 'btnDonate', 'btnAbout', 'btnTheme') { $u[$b].Padding = $pad }
     $cols = $u.grid.Columns
     $cols[$script:ColReferent].Visibility = $(if ($w -lt 1180 -or $script:View -eq 'byref') { 'Collapsed' } else { 'Visible' })
     $cols[$script:ColReminders].Visibility = $(if ($w -lt 1050) { 'Collapsed' } else { 'Visible' })

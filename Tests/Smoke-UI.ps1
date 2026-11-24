@@ -476,6 +476,10 @@ $steps.Enqueue({
 })
 $steps.Enqueue({
     Shot '11-narrow-light'
+    foreach ($bn in 'btnDonate', 'btnAbout', 'btnTheme') {
+        $b = $u[$bn]; $inner = $b.ActualWidth - $b.BorderThickness.Left - $b.BorderThickness.Right - $b.Padding.Left - $b.Padding.Right
+        Check "sidebar compatta: icona di $bn non tagliata" ($b.Content.ActualWidth -le ($inner + 0.5)) "contenuto=$($b.Content.ActualWidth) spazio=$inner"
+    }
     $u.navDashboard.IsChecked = $true
     # change the status of all open tasks to 'done': empty dashboard
     foreach ($t in @($script:State.Tasks)) { $null = Set-AppTaskStatus $t.id 'done' }
