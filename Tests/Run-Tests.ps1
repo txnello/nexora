@@ -6,6 +6,9 @@ $script:TestMode = $true
 $root = Split-Path -Parent $PSScriptRoot
 foreach ($m in 'Utils', 'Strings', 'AppInfo', 'Storage', 'Priority', 'Config', 'Tasks') { . (Join-Path $root "src\Modules\$m.ps1") }
 
+# the chosen-data-folder pointer lives in the registry: use a throw-away key so the tests never touch the real preference
+$script:DataPathRegistryKey = 'Software\NexoraTest-' + [guid]::NewGuid().ToString('N')
+function Clear-TestDataPathRegistry { try { [Microsoft.Win32.Registry]::CurrentUser.DeleteSubKeyTree($script:DataPathRegistryKey, $false) } catch { } }
 $tmp = Join-Path ([IO.Path]::GetTempPath()) ('nexora-test-' + [guid]::NewGuid().ToString('N'))
 Initialize-Storage -DataPath $tmp
 
@@ -565,7 +568,50 @@ Test-Case 'personal data lives in LOCALAPPDATA\Nexora, never next to the applica
         Set-DataPathPreference -Path $custom
         Assert-Eq (Get-DefaultDataPath) $custom 'saved data path not used'
         $env:NEXORA_DATA = 'C:\x\override'; Assert-Eq (Get-DefaultDataPath) 'C:\x\override'
-    } finally { $env:NEXORA_DATA = $save; $env:LOCALAPPDATA = $saveLocal; $script:AppRoot = $oldRoot }
+    } finally { $env:NEXORA_DATA = $save; $env:LOCALAPPDATA = $saveLocal; $script:AppRoot = $oldRoot; Clear-TestDataPathRegistry }
+}
+Test-Case 'the chosen data folder is kept in the registry: nothing is written to the default folder and deleting it changes nothing' {
+    $save = $env:NEXORA_DATA; $saveLocal = $env:LOCALAPPDATA; $oldRoot = $script:AppRoot
+    $env:NEXORA_DATA = $null
+    $env:LOCALAPPDATA = Join-Path $tmp 'local-profile-reg'
+    $script:AppRoot = Join-Path $tmp 'no-portable-mode'
+    try {
+        Clear-TestDataPathRegistry
+        $default = Join-Path $env:LOCALAPPDATA 'Nexora'
+        $custom = Join-Path $tmp 'chosen-elsewhere'
+        Assert-Eq (Get-DefaultDataPath) $default 'without a choice the default folder is expected'
+        Set-DataPathPreference -Path $custom
+        Assert-Eq (Get-DataPathRegistryValue) $custom 'choice not stored in the registry'
+        Assert-True (-not (Test-Path -LiteralPath $default)) 'choosing a folder created or touched the default folder'
+        # the user deletes the original folder (it still existed with data in it): the choice must survive
+        New-Item -ItemType Directory -Path $default -Force | Out-Null
+        Set-Content (Join-Path $default 'tasks.json') '{}'
+        Remove-Item -LiteralPath $default -Recurse -Force
+        Assert-Eq (Get-DefaultDataPath) $custom 'choice lost after deleting the default folder'
+        Assert-True (-not (Test-Path -LiteralPath $default)) 'default folder recreated'
+    } finally { $env:NEXORA_DATA = $save; $env:LOCALAPPDATA = $saveLocal; $script:AppRoot = $oldRoot; Clear-TestDataPathRegistry }
+}
+Test-Case 'a pointer file written by 1.0.4 is migrated to the registry and the old folder is no longer needed' {
+    $save = $env:NEXORA_DATA; $saveLocal = $env:LOCALAPPDATA; $oldRoot = $script:AppRoot
+    $env:NEXORA_DATA = $null
+    $env:LOCALAPPDATA = Join-Path $tmp 'local-profile-legacy'
+    $script:AppRoot = Join-Path $tmp 'no-portable-mode'
+    try {
+        Clear-TestDataPathRegistry
+        $default = Join-Path $env:LOCALAPPDATA 'Nexora'
+        $custom = Join-Path $tmp 'legacy-chosen'
+        New-Item -ItemType Directory -Path $default -Force | Out-Null
+        [IO.File]::WriteAllText((Join-Path $default 'data-path.txt'), $custom, (New-Object System.Text.UTF8Encoding($true)))
+        Assert-Eq (Get-DefaultDataPath) $custom 'legacy pointer file not honoured'
+        Assert-Eq (Get-DataPathRegistryValue) $custom 'legacy pointer not migrated to the registry'
+        # a stale legacy file never overrides the registry
+        [IO.File]::WriteAllText((Join-Path $default 'data-path.txt'), (Join-Path $tmp 'stale'), (New-Object System.Text.UTF8Encoding($true)))
+        Assert-Eq (Get-DefaultDataPath) $custom 'stale legacy file overrode the registry'
+        # after the migration the user can delete the old folder
+        Remove-Item -LiteralPath $default -Recurse -Force
+        Assert-Eq (Get-DefaultDataPath) $custom 'choice lost after deleting the old folder'
+        Assert-True (-not (Test-Path -LiteralPath $default)) 'old folder recreated'
+    } finally { $env:NEXORA_DATA = $save; $env:LOCALAPPDATA = $saveLocal; $script:AppRoot = $oldRoot; Clear-TestDataPathRegistry }
 }
 Test-Case 'a second instance requests activation instead of showing an already-running error' {
     $previousEventName = $script:ActivationEventName
@@ -699,6 +745,7 @@ Test-Case 'data folder switch protects existing data, copies current data, and p
         Exit-DataPathMutex $script:DataMutex
         $script:DataMutex = $null
         $env:LOCALAPPDATA = $saveLocal; $env:NEXORA_DATA = $saveData
+        Clear-TestDataPathRegistry
         if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
         if (Test-Path -LiteralPath $existing) { Remove-Item -LiteralPath $existing -Recurse -Force }
         if (Test-Path -LiteralPath $merge) { Remove-Item -LiteralPath $merge -Recurse -Force }
@@ -823,6 +870,7 @@ Test-Case 'every T ''...'' text used in the PowerShell code has an Italian trans
 }
 Set-Language 'en'
 
+Clear-TestDataPathRegistry
 Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
 Write-Host ("`nResult: {0} passed, {1} failed" -f $script:pass, $script:fail) -ForegroundColor $(if ($script:fail) { 'Red' } else { 'Green' })
 exit $(if ($script:fail) { 1 } else { 0 })

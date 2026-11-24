@@ -11,6 +11,11 @@ $script:StartupApprovedRunKey = 'Software\Microsoft\Windows\CurrentVersion\Explo
 $script:StartupValueName = 'NEXORA'
 $script:StartupTaskId = 'NexoraStartup'
 $script:ActivationEventName = 'Local\NEXORA.ActivateExisting'
+# The data folder chosen by the user is remembered in the registry (HKCU\Software\Nexora, value DataPath), NOT in a file
+# inside the default data folder: otherwise deleting the old folder would also delete the pointer and the app would
+# silently fall back to (and recreate) %LOCALAPPDATA%\Nexora. Tests override the key name to stay isolated.
+$script:DataPathRegistryKey = 'Software\Nexora'
+$script:DataPathRegistryValue = 'DataPath'
 # application root: the folder containing src\ (both in sources and in the installed package)
 $script:AppRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $script:AssetsPath = Join-Path $script:AppRoot 'Assets'
@@ -181,32 +186,50 @@ function Get-NormalizedDataPath {
     return $fullPath.TrimEnd('\')
 }
 
-function Get-DataPathPreferenceFile {
+function Get-LegacyDataPathPreferenceFile {
+    # Up to 1.0.4 the chosen folder was remembered in a file inside the default data folder. It is only READ now
+    # (and migrated to the registry); nothing is ever written into the default folder any more.
     $base = $env:LOCALAPPDATA
     if (-not $base) { $base = [Environment]::GetFolderPath('LocalApplicationData') }
     return (Join-Path (Join-Path $base 'Nexora') 'data-path.txt')
 }
 
+function Get-DataPathRegistryValue {
+    $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($script:DataPathRegistryKey, $false)
+    if ($null -eq $key) { return $null }
+    try { return [string]$key.GetValue($script:DataPathRegistryValue, $null) }
+    finally { $key.Dispose() }
+}
+
+function Set-DataPathRegistryValue {
+    param([Parameter(Mandatory)][string]$Path)
+    $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey($script:DataPathRegistryKey)
+    try { $key.SetValue($script:DataPathRegistryValue, $Path, [Microsoft.Win32.RegistryValueKind]::String) }
+    finally { $key.Dispose() }
+}
+
 function Get-SavedDataPath {
-    $file = Get-DataPathPreferenceFile
+    # 1) registry (current); 2) pointer file of versions <= 1.0.4, migrated to the registry the first time it is read
+    $value = Get-DataPathRegistryValue
+    if (-not [string]::IsNullOrWhiteSpace($value)) {
+        $value = $value.Trim()
+        if (-not [System.IO.Path]::IsPathRooted($value)) { throw (T 'The saved data folder path is invalid: {0}' ('HKCU\' + $script:DataPathRegistryKey)) }
+        return Get-NormalizedDataPath $value
+    }
+    $file = Get-LegacyDataPathPreferenceFile
     if (-not (Test-Path -LiteralPath $file)) { return $null }
-    $value = [System.IO.File]::ReadAllText($file, [System.Text.Encoding]::UTF8).Trim()
-    if ([string]::IsNullOrWhiteSpace($value) -or -not [System.IO.Path]::IsPathRooted($value)) {
+    $legacy = [System.IO.File]::ReadAllText($file, [System.Text.Encoding]::UTF8).Trim()
+    if ([string]::IsNullOrWhiteSpace($legacy) -or -not [System.IO.Path]::IsPathRooted($legacy)) {
         throw (T 'The saved data folder path is invalid: {0}' $file)
     }
-    return Get-NormalizedDataPath $value
+    $path = Get-NormalizedDataPath $legacy
+    try { Set-DataPathRegistryValue -Path $path } catch { }   # best effort: the file is still used if the registry is not writable
+    return $path
 }
 
 function Set-DataPathPreference {
     param([Parameter(Mandatory)][string]$Path)
-    $fullPath = Get-NormalizedDataPath $Path
-    $file = Get-DataPathPreferenceFile
-    $parent = Split-Path -Parent $file
-    if (-not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
-    $temp = "$file.$([guid]::NewGuid().ToString('N')).tmp"
-    [System.IO.File]::WriteAllText($temp, $fullPath, (New-Object System.Text.UTF8Encoding($true)))
-    if (Test-Path -LiteralPath $file) { [System.IO.File]::Replace($temp, $file, "$file.bak") }
-    else { [System.IO.File]::Move($temp, $file) }
+    Set-DataPathRegistryValue -Path (Get-NormalizedDataPath $Path)
 }
 
 function Get-DataPathMutexName {

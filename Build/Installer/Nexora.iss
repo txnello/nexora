@@ -111,6 +111,19 @@ var
   SavedPath: string;
 begin
   Result := DefaultUserDataDir;
+  { current versions remember the chosen data folder in the registry (HKCU\Software\Nexora, value DataPath) }
+  if RegQueryStringValue(HKCU, 'Software\Nexora', 'DataPath', SavedPath) then
+  begin
+    SavedPath := Trim(SavedPath);
+    if IsAbsoluteDataPath(SavedPath) and
+       (CompareText(AddBackslash(SavedPath), AddBackslash(ExtractFileDrive(SavedPath))) <> 0) and
+       IsNexoraDataDir(SavedPath) then
+    begin
+      Result := SavedPath;
+      Exit;
+    end;
+  end;
+  { versions up to 1.0.4 used a pointer file inside the default folder: still honoured as a fallback }
   if LoadStringsFromFile(AddBackslash(Result) + 'data-path.txt', SavedLines) and
      (GetArrayLength(SavedLines) > 0) then
   begin
@@ -197,6 +210,8 @@ begin
   DeleteNexoraDataAt(SelectedDir);
   if CompareText(AddBackslash(SelectedDir), AddBackslash(DefaultDir)) <> 0 then
     DeleteNexoraDataAt(DefaultDir);
+  { the pointer to the chosen folder is removed together with the data (kept when the user keeps the data) }
+  RegDeleteKeyIncludingSubkeys(HKCU, 'Software\Nexora');
 end;
 
 { I dati personali NON si trovano nella cartella di installazione e non vengono mai toccati da installazione o aggiornamento.
