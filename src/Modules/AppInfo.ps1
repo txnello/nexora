@@ -187,7 +187,7 @@ function Get-NormalizedDataPath {
 }
 
 function Get-LegacyDataPathPreferenceFile {
-    # Up to 1.0.4 the chosen folder was remembered in a file inside the default data folder. It is only READ now
+    # Up to 1.0.5 the chosen folder was remembered in a file inside the default data folder. It is only READ now
     # (and migrated to the registry); nothing is ever written into the default folder any more.
     $base = $env:LOCALAPPDATA
     if (-not $base) { $base = [Environment]::GetFolderPath('LocalApplicationData') }
@@ -209,7 +209,7 @@ function Set-DataPathRegistryValue {
 }
 
 function Get-SavedDataPath {
-    # 1) registry (current); 2) pointer file of versions <= 1.0.4, migrated to the registry the first time it is read
+    # 1) registry (current); 2) pointer file of versions <= 1.0.5, migrated to the registry the first time it is read
     $value = Get-DataPathRegistryValue
     if (-not [string]::IsNullOrWhiteSpace($value)) {
         $value = $value.Trim()

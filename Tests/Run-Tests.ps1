@@ -591,7 +591,7 @@ Test-Case 'the chosen data folder is kept in the registry: nothing is written to
         Assert-True (-not (Test-Path -LiteralPath $default)) 'default folder recreated'
     } finally { $env:NEXORA_DATA = $save; $env:LOCALAPPDATA = $saveLocal; $script:AppRoot = $oldRoot; Clear-TestDataPathRegistry }
 }
-Test-Case 'a pointer file written by 1.0.4 is migrated to the registry and the old folder is no longer needed' {
+Test-Case 'a pointer file written by 1.0.5 or earlier is migrated to the registry and the old folder is no longer needed' {
     $save = $env:NEXORA_DATA; $saveLocal = $env:LOCALAPPDATA; $oldRoot = $script:AppRoot
     $env:NEXORA_DATA = $null
     $env:LOCALAPPDATA = Join-Path $tmp 'local-profile-legacy'

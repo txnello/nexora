@@ -2,6 +2,16 @@
 
 All notable changes to NEXORA are listed here, newest first.
 
+## [1.0.6] - 2026-11-24
+
+### Fixed
+- After changing the data folder, deleting the original folder in `%LOCALAPPDATA%` and restarting NEXORA recreated that folder and went back to it. The chosen folder is now remembered in the Windows registry (`HKCU\Software\Nexora`) instead of in a file inside the original folder, so NEXORA no longer writes anything to the old folder and does not recreate it.
+- The due-date calendar was too small and, on the dark theme, its numbers were dark gray on a dark background and barely visible. It is now larger (about 274 x 284 px instead of 177 x 166 px) and follows the light and dark themes: readable day numbers, today outlined, the selected day highlighted and days of the neighboring months dimmed. The month and year pickers (click the calendar header) were restyled as well.
+
+### Data and compatibility
+- The data folder choice made with 1.0.5 or earlier is migrated automatically the first time 1.0.6 starts. Start 1.0.6 at least once before deleting the old folder, otherwise the choice stored in it is lost.
+- Going back to 1.0.5 or earlier after changing the data folder in 1.0.6 may bring back the old default folder, because those versions do not read the registry.
+
 ## [1.0.5] - 2026-11-24
 
 ### Added

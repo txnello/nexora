@@ -1,6 +1,6 @@
 # NEXORA – Technical documentation
 
-Document version: 1.0.5 · Verification status is reported at the end (see *Verification status* section).
+Document version: 1.0.6 · Verification status is reported at the end (see *Verification status* section).
 
 ## 1. Analysis of the starting project (Phase 1)
 
@@ -44,12 +44,12 @@ The launcher (`Build\Launcher\Program.cs`) is compiled with .NET Framework 4's `
   Nexora.exe  LICENSE.txt  README.txt  unins000.exe
   app\  Start-Nexora.ps1  VERSION  src\...  Assets\Branding\...
 %LOCALAPPDATA%\Nexora\                 (default data folder + persisted choice)
-  data-path.txt                        (chosen path, if different from the default)
+  data-path.txt                        (only written by versions up to 1.0.5; read once and migrated to the registry)
   tasks.json  settings.json  history.json  (+ .bak)  Backups\  Logs\
 ```
 Startup and background options are saved immediately when a checkbox changes. Auto-start uses `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\NEXORA`. In both cases the user can disable it from Task Manager. The background option uses `NotifyIcon` and cancels window closure when active (default); the tray icon menu lets the user restore or exit the app. Reopening NEXORA from the shortcut while it is already running sends a request to the active instance, which restores the hidden window instead of showing a warning. Windows session logoff and the *Exit* command terminate the process regardless.
-Data path: `NEXORA_DATA` variable (test/IT) › path chosen by the user in `%LOCALAPPDATA%\Nexora\data-path.txt` › portable mode (`portable.flag` file next to the app → `.\Data`) › `%LOCALAPPDATA%\Nexora`.
-In normal use another folder can be chosen from *Settings → Backup and data*. The persistent selection is in `%LOCALAPPDATA%\Nexora\data-path.txt`, independent of the transferred files. For an empty destination, copying current data is preselected and the source is left intact. For a populated destination you can replace it (after saving a backup copy), switch to the data already there without copying the current data into it, or merge tasks, statuses, priorities, referents, clients, projects and history. During the merge the destination wins for scalar preferences and, in case of identical status/priority names, for their colors and values; entities with different names are kept.
+Data path: `NEXORA_DATA` variable (test/IT) › path chosen by the user, stored in the registry (`HKCU\Software\Nexora`, value `DataPath`; the `data-path.txt` file of versions up to 1.0.5 is still read as a fallback and migrated) › portable mode (`portable.flag` file next to the app → `.\Data`) › `%LOCALAPPDATA%\Nexora`.
+In normal use another folder can be chosen from *Settings → Backup and data*. The persistent selection is in the registry (`HKCU\Software\Nexora`, value `DataPath`), independent of the transferred files and of any data folder: after a switch NEXORA writes nothing into the previous folder, so the user can delete it and the app does not recreate it or go back to it. The installer reads the same value (with the old file as fallback) to find the data for the startup option and for the uninstall prompt, and removes the key only when the user chooses to delete the data. For an empty destination, copying current data is preselected and the source is left intact. For a populated destination you can replace it (after saving a backup copy), switch to the data already there without copying the current data into it, or merge tasks, statuses, priorities, referents, clients, projects and history. During the merge the destination wins for scalar preferences and, in case of identical status/priority names, for their colors and values; entities with different names are kept.
 The selection is local to the Windows profile and does not coordinate multiple instances across different devices: use a synchronized folder only once synchronization is complete and with NEXORA closed on the other devices.
 
 ### 2.1 Support (donation) button
@@ -99,11 +99,14 @@ Temporary internal workarounds: Defender exclusion for the install folder (requi
 ## 8. Verification status (Windows 11 Enterprise 26200, Windows PowerShell 5.1)
 | Verification | Outcome |
 |---|---|
-| Logic tests (65) and real-UI tests with screenshots (133) | Passed (24/11/2026), source version 1.0.5 |
+| Due-date calendar: size, readable colors in the dark and light themes, picking a day fills the field and closes the popup, month picker | Passed (UI tests and screenshots of both themes). Clicking the day buttons and the header with a real mouse was not done: the date selection and the display mode were driven from the test |
+| Logic tests (67) and real-UI tests with screenshots (136) | Passed (24/11/2026), source version 1.0.6 |
+| Data folder pointer in the registry: choosing a folder writes nothing to the default folder; deleting the default folder keeps the choice and does not recreate it; the pointer file of 1.0.5 or earlier is migrated and a stale file never overrides the registry | Passed (automatic tests with a throw-away registry key; the real key was not touched). Not tried end to end with the installed app |
+| Installer script with the registry lookup | Compiles (ISCC, temporary output with dummy files); the new lookup and the key removal on uninstall were **not run** |
 | Compatibility with 1.0.4 data: files without `project`/`client`, files with projects but no clients, merge between folders, round trip on disk | Passed (automatic tests with synthetic files). A copy of the developer's real data folder also loaded without warnings, but it contained no tasks, so it proves nothing about task data |
 | Initial window width: all columns, Link included, visible without horizontal scrolling | Passed (UI test on `ScrollableWidth`) |
 | Collapsed sidebar: bottom icons not clipped; title tooltip hidden when the description is empty | Passed (UI tests and screenshots) |
-| Build and install of 1.0.5, `Build\UpdateInstaller.bat`, launch of the installed 1.0.5 | Not verified: the sources were tested, but the installer was not rebuilt and the `.bat` was not run |
+| Build and install of 1.0.6, `Build\UpdateInstaller.bat`, launch of the installed 1.0.6 | Not verified: the sources were tested, but the installer was not rebuilt and the `.bat` was not run |
 | "Support NEXORA" button (sidebar + About), `DonateButton` style and IT texts | Partial — presence and rendering verified (UI smoke 96/96 + modal About test); Ko-fi page opening **not yet tested with a click** |
 | `Nexora.exe` launch with no console or technical windows, single process, no child process | Verified (process/window list) |
 | NEXORA icon in title bar and taskbar, window title "NEXORA" | Verified (screenshot) |

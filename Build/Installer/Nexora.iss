@@ -123,7 +123,7 @@ begin
       Exit;
     end;
   end;
-  { versions up to 1.0.4 used a pointer file inside the default folder: still honoured as a fallback }
+  { versions up to 1.0.5 used a pointer file inside the default folder: still honoured as a fallback }
   if LoadStringsFromFile(AddBackslash(Result) + 'data-path.txt', SavedLines) and
      (GetArrayLength(SavedLines) > 0) then
   begin
