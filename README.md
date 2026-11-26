@@ -1,4 +1,4 @@
-<img width="724" height="413" alt="Screenshot_2" src="https://github.com/user-attachments/assets/df5935e5-d85b-490f-ba2f-f0320d2e38a9" />
+<img width="793" height="414" alt="HomeDark" src="https://github.com/user-attachments/assets/92579bfe-ea07-4f02-844e-8060ae60cda6" />
 
 # NEXORA
 
@@ -38,11 +38,11 @@ Donations are entirely optional. NEXORA remains free whether or not you donate.
 
 <details>
    <summary>Screenshots</summary>
-   <img width="722" height="413" alt="Screenshot_6" src="https://github.com/user-attachments/assets/010771b5-3e5b-4b78-9ae4-135b5956aff5" />
-   <img width="722" height="411" alt="Screenshot_5" src="https://github.com/user-attachments/assets/d4bd2ef1-b45c-4ab3-be13-c65361304187" />
-   <img width="722" height="411" alt="Screenshot_7" src="https://github.com/user-attachments/assets/243503bd-119a-4e8b-a090-204fd17d9591" />
-   <img width="723" height="413" alt="Screenshot_3" src="https://github.com/user-attachments/assets/022c880e-a113-4aba-81cd-7e230869cd27" />
-   <img width="724" height="414" alt="Screenshot_4" src="https://github.com/user-attachments/assets/34b132da-7eac-4fe9-a654-274a393dc12c" />
+   <img width="792" height="413" alt="TaskDark" src="https://github.com/user-attachments/assets/05063150-37bb-4e70-8d63-c4242cb86d2b" />
+   <img width="792" height="411" alt="HomeLight" src="https://github.com/user-attachments/assets/c7559188-db5a-4959-9aef-3905c3b340a2" />
+   <img width="791" height="411" alt="ByOwnerLight" src="https://github.com/user-attachments/assets/07cb1664-4f0b-4dca-9d36-2f65b45e94aa" />
+   <img width="793" height="412" alt="SettingsDark" src="https://github.com/user-attachments/assets/5436e716-8aa5-499b-8207-62aaf950756c" />
+   <img width="792" height="412" alt="ScoreDark" src="https://github.com/user-attachments/assets/44b286c3-4d1c-47f4-a52c-7cde5233ca94" />
 </details>
 
 ## Changelog
@@ -93,11 +93,11 @@ Le donazioni sono del tutto facoltative. NEXORA resta gratuita anche senza donar
 
 <details>
    <summary>Screenshots</summary>
-   <img width="722" height="413" alt="Screenshot_6" src="https://github.com/user-attachments/assets/010771b5-3e5b-4b78-9ae4-135b5956aff5" />
-   <img width="722" height="411" alt="Screenshot_5" src="https://github.com/user-attachments/assets/d4bd2ef1-b45c-4ab3-be13-c65361304187" />
-   <img width="722" height="411" alt="Screenshot_7" src="https://github.com/user-attachments/assets/243503bd-119a-4e8b-a090-204fd17d9591" />
-   <img width="723" height="413" alt="Screenshot_3" src="https://github.com/user-attachments/assets/022c880e-a113-4aba-81cd-7e230869cd27" />
-   <img width="724" height="414" alt="Screenshot_4" src="https://github.com/user-attachments/assets/34b132da-7eac-4fe9-a654-274a393dc12c" />
+   <img width="792" height="413" alt="TaskDark" src="https://github.com/user-attachments/assets/05063150-37bb-4e70-8d63-c4242cb86d2b" />
+   <img width="792" height="411" alt="HomeLight" src="https://github.com/user-attachments/assets/c7559188-db5a-4959-9aef-3905c3b340a2" />
+   <img width="791" height="411" alt="ByOwnerLight" src="https://github.com/user-attachments/assets/07cb1664-4f0b-4dca-9d36-2f65b45e94aa" />
+   <img width="793" height="412" alt="SettingsDark" src="https://github.com/user-attachments/assets/5436e716-8aa5-499b-8207-62aaf950756c" />
+   <img width="792" height="412" alt="ScoreDark" src="https://github.com/user-attachments/assets/44b286c3-4d1c-47f4-a52c-7cde5233ca94" />
 </details>
 
 ## Changelog
