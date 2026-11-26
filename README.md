@@ -21,7 +21,7 @@ NEXORA supports Windows 10 and Windows 11. To update, repeat the steps from the 
 ## Why NEXORA?
 
 - **Know what to focus on:** an automatic, configurable score ranks tasks by priority, deadline, reminders and age.
-- **Make it yours:** customize statuses, priority levels, clients, projects, owners, date format, colors and scoring weights.
+- **Make it yours:** customize statuses, priority levels, clients, projects, owners, date format, colors, scoring weights and a score weight for each status.
 - **Keep work organized:** assign each task to a client, a project and an owner, then group, search and filter by any of them. Task history, reminders, completion dates and optional links are included.
 - **Stay in control of your data:** tasks and settings are stored locally on your PC. You can choose a different data folder and create or restore backups.
 - **For individuals and teams:** use it for personal work or internal business task management.
@@ -76,7 +76,7 @@ NEXORA supporta Windows 10 e Windows 11. Per aggiornare, ripeti i passaggi dalla
 ## Perché NEXORA?
 
 - **Scopri su cosa concentrarti:** uno score automatico e personalizzabile ordina i task in base a priorità, scadenza, solleciti e anzianità.
-- **Adattala al tuo modo di lavorare:** personalizza stati, livelli di priorità, clienti, progetti, referenti, formato data, colori e pesi dello score.
+- **Adattala al tuo modo di lavorare:** personalizza stati, livelli di priorità, clienti, progetti, referenti, formato data, colori, pesi dello score e un peso nel punteggio per ogni stato.
 - **Tieni tutto organizzato:** assegna ogni task a un cliente, a un progetto e a un referente, poi raggruppa, cerca e filtra per ciascuno di essi. Includi cronologia, solleciti, date di completamento e link facoltativi.
 - **I dati restano sotto il tuo controllo:** task e impostazioni vengono salvati localmente sul PC. Puoi scegliere un’altra cartella dati e creare o ripristinare backup.
 - **Per singoli e team:** usala per il lavoro personale o per la gestione interna dei task aziendali.

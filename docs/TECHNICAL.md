@@ -1,6 +1,6 @@
 # NEXORA – Technical documentation
 
-Document version: 1.0.6 · Verification status is reported at the end (see *Verification status* section).
+Document version: 1.0.7 · Verification status is reported at the end (see *Verification status* section).
 
 ## 1. Analysis of the starting project (Phase 1)
 
@@ -61,6 +61,7 @@ The button uses the `DonateButton` style (`src\UI\Styles.xaml`): a brand gradien
 - Atomic writes (temporary file + replacement, `.bak` copy), corrupted JSON → restore from `.bak` with a notice and a copy of the corrupted file in `Backups\corrotto-*`.
 - Daily automatic backup, before deletions/imports and **before the first launch of a new version** (`pre-upgrade`); manual backups are never deleted; `.zip` export/import.
 - Data repaired on load (nonexistent statuses/priorities, wrong dates, duplicate codes).
+- Status score weight (1.0.7): each status has an optional `scoreValue`, a whole number from 1 to 10 (10 = no reduction). The score is `(P×wP + S×wS + L×wL + A×wA) × scoreValue / 10`, so the four factor weights and their "sum = 100" rule are untouched. A status without the field (files of older versions, objects built by hand) or with an invalid one counts as 10 (`Get-StatusScoreValue`): existing data keeps exactly the same scores until the user sets a weight. Values outside 1-10 found in a file are clamped, text becomes 10. New statuses you create default to 10. The built-in statuses of a brand-new data folder weigh 10 except Waiting (7) and Blocked (5) (`Get-DefaultSettings`); files of earlier versions have no weight and stay at 10 on every status, Waiting and Blocked included, so updating changes nothing. The merge between data folders copies the weight of the statuses it adds; a status already in the destination keeps the destination's. Versions older than 1.0.7 ignore the field and drop it the next time they save.
 - Clients and projects (1.0.5) follow the same model as owners: the list lives in `settings.clients` / `settings.projects` (`{id, name}`, name up to 80 characters, unique case-insensitively) and each task stores the **name** in `task.client` / `task.project` (empty string = none). The two fields are independent: a client does not own projects. Names used by tasks but missing from the list are added on load. Renaming updates the tasks that use the name. Deleting never deletes tasks: they go back to "no client" / "no project", after a safety snapshot (`pre-delete-client`, `pre-delete-project`). An update call whose input has no `Client` / `Project` key (older callers) leaves the stored value untouched; `Repair-Tasks` and the merge in `Storage.ps1` list task fields explicitly, so any new task field must be added to both. A version older than 1.0.5 ignores these fields and drops them the next time it saves.
 
 ## 4. Versioning
@@ -100,13 +101,19 @@ Temporary internal workarounds: Defender exclusion for the install folder (requi
 | Verification | Outcome |
 |---|---|
 | Due-date calendar: size, readable colors in the dark and light themes, picking a day fills the field and closes the popup, month picker | Passed (UI tests and screenshots of both themes). Clicking the day buttons and the header with a real mouse was not done: the date selection and the display mode were driven from the test |
-| Logic tests (67) and real-UI tests with screenshots (136) | Passed (24/11/2026), source version 1.0.6 |
+| Required name: the question is needed whenever the name is empty (start and after a data-folder change), the Settings field is required, settings of older versions load fine; the "My tasks" message bar has rounded top corners | Passed (automatic tests; the dialog is saved by a test helper and the corners are checked in a screenshot of the message bar). The refusal path (closing the dialog exits the application), the dialog layout and the real first launch were not tried |
+| Defaults: a data folder with no files starts in English with the dark theme; so do settings without language/theme or with invalid values. The application does not read the Windows language | Passed (automatic test for the empty folder; the other two cases were checked once by hand with a throw-away folder) |
+| Settings page uses the full window width | Passed (screenshots at the initial width); not tried at very large widths |
+| Status score weight: scaling (weight 5 halves the score, 10 restores it), missing weight = 10, validation (0, 11, decimals and text rejected), creation with a weight, editing, statuses sharing a value, closed statuses unranked, invalid values repaired on load, weight kept in a folder merge, weight chosen in the status dialog | Passed (automatic tests). The new field in the status dialog and the "open · n/10" text in the status list were not looked at in a screenshot |
+| Status weight defaults: a new data folder starts with Waiting 7, Blocked 5 and the rest 10; an older settings file with Waiting and Blocked but no weights keeps all of them at 10 | Passed (automatic tests with synthetic files; not tried with a real update from an installed version) |
+| Logic tests (76) and real-UI tests with screenshots (150) | Passed (26/11/2026), source version 1.0.7 |
+| "Complete" action (button and context-menu item): selected open task goes to Done with completion date, history entry and no ranking score; no change on an already completed task; fallback to another closed status; clear error when no closed status exists | Passed (automatic tests; the UI test drives the button by raising its click event, not with a real mouse click) |
 | Data folder pointer in the registry: choosing a folder writes nothing to the default folder; deleting the default folder keeps the choice and does not recreate it; the pointer file of 1.0.5 or earlier is migrated and a stale file never overrides the registry | Passed (automatic tests with a throw-away registry key; the real key was not touched). Not tried end to end with the installed app |
 | Installer script with the registry lookup | Compiles (ISCC, temporary output with dummy files); the new lookup and the key removal on uninstall were **not run** |
 | Compatibility with 1.0.4 data: files without `project`/`client`, files with projects but no clients, merge between folders, round trip on disk | Passed (automatic tests with synthetic files). A copy of the developer's real data folder also loaded without warnings, but it contained no tasks, so it proves nothing about task data |
 | Initial window width: all columns, Link included, visible without horizontal scrolling | Passed (UI test on `ScrollableWidth`) |
 | Collapsed sidebar: bottom icons not clipped; title tooltip hidden when the description is empty | Passed (UI tests and screenshots) |
-| Build and install of 1.0.6, `Build\UpdateInstaller.bat`, launch of the installed 1.0.6 | Not verified: the sources were tested, but the installer was not rebuilt and the `.bat` was not run |
+| Build and install of 1.0.7, `Build\UpdateInstaller.bat`, launch of the installed 1.0.7 | Not verified: the sources were tested, but the installer was not rebuilt and the `.bat` was not run |
 | "Support NEXORA" button (sidebar + About), `DonateButton` style and IT texts | Partial — presence and rendering verified (UI smoke 96/96 + modal About test); Ko-fi page opening **not yet tested with a click** |
 | `Nexora.exe` launch with no console or technical windows, single process, no child process | Verified (process/window list) |
 | NEXORA icon in title bar and taskbar, window title "NEXORA" | Verified (screenshot) |

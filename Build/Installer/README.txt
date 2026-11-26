@@ -20,6 +20,11 @@ YOUR DATA
   updating NEXORA never deletes them. Uninstalling asks whether to keep or delete them (default: keep).
   Automatic daily backups are created in the Backups folder; you can also export/import a full backup
   from Settings > Backups and data.
+  You can choose another folder (for example one synchronized by your cloud service) from
+  Settings > Backups and data > Change data folder. The choice is remembered for your Windows account
+  (in the registry, key HKCU\Software\Nexora), not inside the data folder: after starting this version
+  once, the old folder can be deleted and NEXORA will not recreate it. Close NEXORA on your other
+  devices before using the same folder, to avoid conflicting edits.
 
 UPDATE
   Run the new Nexora-Setup.exe over the existing installation. Your data is kept, and NEXORA makes a safety
@@ -28,7 +33,7 @@ UPDATE
 UNINSTALL
   Settings > Apps > Installed apps > NEXORA > Uninstall.
   Silent uninstall for IT:   unins000.exe /VERYSILENT                    (keeps personal data)
-                             unins000.exe /VERYSILENT /DELETEDATA=1      (also deletes personal data)
+                             unins000.exe /VERYSILENT /DELETEDATA=1      (also deletes personal data and the saved data-folder choice)
 
 SILENT INSTALL (IT)
   Nexora-Setup.exe /VERYSILENT /CURRENTUSER     (current user)     |     /ALLUSERS  (all users, requires admin)

@@ -2,6 +2,18 @@
 
 All notable changes to NEXORA are listed here, newest first.
 
+## [1.0.7] - 2026-11-26
+
+### Added
+- **Complete button:** select a task and press "Complete" to move it straight to the Done status. The completion date is set, the change is recorded in the task history and the task leaves the ranking, exactly as if you had changed the status by hand. The same command is available in the right-click menu. The button is disabled when no task is selected or the task is already completed.
+- If the default Done status was renamed it is still used; if it is no longer a "closed" status, the first closed status is used instead. When no closed status exists, NEXORA asks you to mark one as closed in Settings.
+- **Score weight per status:** every status now has a weight from 1 to 10 (10 = no reduction). New installations start with Waiting at 7, Blocked at 5 and every other status at 10; new statuses you create start at 10. The score of a task is multiplied by weight/10, so tasks in a status such as Waiting, or in a custom status of yours, count less in the ranking. Set the weight when you create a status (also from the task dialog) or edit it in Settings; several statuses can share the same value. Statuses and data from earlier versions weigh 10, so no score changes until you set a weight. The task details show the reduction when the weight is below 10. A task with the highest priority stays "urgent" whatever its status weight, and completed statuses are still left out of the ranking. Older versions ignore the weights.
+- **Your name is now required:** NEXORA asks "What is your name?" whenever no name is saved, so that "My tasks" always works. Any name will do. The name is also the default owner of new tasks. The question cannot be skipped: closing it or pressing "Exit NEXORA" closes the application. If you already have a name, you are not asked; if you had none, you are asked after updating. In Settings the name field is now required and marked with *, like the other preferences. The name is stored in the data folder: if you switch to a folder that already contains your data (using it as it is, or merging), the name saved there is the one you get, and if that folder has no name you are asked for it right away.
+
+### Fixed
+- The message shown in "My tasks" when no name is set had square top corners that stuck out of the rounded card. The corners are now rounded.
+- The Settings page was limited to 1000 px and aligned to the left, unlike the other pages. Its blocks now use the full width of the window.
+
 ## [1.0.6] - 2026-11-24
 
 ### Fixed
