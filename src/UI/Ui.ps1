@@ -561,6 +561,7 @@ function Invoke-ChooseDataFolder {
     Refresh-Tasks
     if ($script:State.Warnings.Count -gt 0) { Show-Message -Title (T 'Data warning') -Text ($script:State.Warnings -join "`n`n") -Icon 'warn' | Out-Null }
     Show-Toast (T 'Data folder changed to: {0}' $script:DataPath)
+    Invoke-UserNamePrompt   # the new folder may have no name saved
 }
 
 function Save-StartupPreferences {
@@ -744,6 +745,11 @@ function Get-PreferenceValidation {
     Set-FieldInvalid $Controls.txtPrefix (-not $prefixValid)
     if (-not $prefixValid) { $errors.Add((T 'The code prefix must be 1-10 alphanumeric characters (A-Z, 0-9).')) }
 
+    $userName = $Controls.txtUserName.Text.Trim()
+    $userNameValid = ($userName.Length -ge 1 -and $userName.Length -le 80)
+    Set-FieldInvalid $Controls.txtUserName (-not $userNameValid)
+    if (-not $userNameValid) { $errors.Add((T 'The name is required.')) }
+
     $language = $(if ($Controls.cmbLanguage.SelectedItem) { $Controls.cmbLanguage.SelectedItem.id } else { '' })
     $theme = $(if ($Controls.cmbTheme.SelectedItem) { $Controls.cmbTheme.SelectedItem.id } else { '' })
     $dateFormat = $(if ($Controls.cmbDateFormat.SelectedItem) { $Controls.cmbDateFormat.SelectedItem.id } else { '' })
@@ -791,7 +797,7 @@ function Register-SettingsHandlers {
         On $checkbox 'Unchecked' { param($s, $e) Save-StartupPreferences }
     }
 
-    foreach ($field in $u.txtNoDue, $u.txtAgeCap, $u.txtUrgent2, $u.txtPrefix, $u.txtMaxBackups) {
+    foreach ($field in $u.txtNoDue, $u.txtAgeCap, $u.txtUrgent2, $u.txtPrefix, $u.txtMaxBackups, $u.txtUserName) {
         On $field 'TextChanged' { param($s, $e)
             switch ($s.Name) {
                 'txtNoDue' {
@@ -807,13 +813,14 @@ function Register-SettingsHandlers {
                     if ([double]::TryParse($s.Text.Trim().Replace(',', '.'), [System.Globalization.NumberStyles]::Float, $script:Inv, [ref]$v) -and $v -ge 1 -and $v -le 100) { Set-FieldInvalid $s $false }
                 }
                 'txtPrefix' { if ($s.Text.Trim() -match '^[A-Za-z0-9]{1,10}$') { Set-FieldInvalid $s $false } }
+                'txtUserName' { if ($s.Text.Trim().Length -ge 1) { Set-FieldInvalid $s $false } }
                 'txtMaxBackups' {
                     $v = 0
                     if ([int]::TryParse($s.Text.Trim(), [ref]$v) -and $v -ge 5 -and $v -le 500) { Set-FieldInvalid $s $false }
                 }
             }
             if ($script:Ui.txtParamsError.Visibility -eq 'Visible' -and $s.Name -in @('txtNoDue', 'txtAgeCap', 'txtUrgent2')) { Update-ScoringParameterError $script:Ui }
-            if ($script:Ui.txtPrefError.Visibility -eq 'Visible' -and $s.Name -in @('txtPrefix', 'txtMaxBackups')) { Update-PreferenceError $script:Ui }
+            if ($script:Ui.txtPrefError.Visibility -eq 'Visible' -and $s.Name -in @('txtPrefix', 'txtMaxBackups', 'txtUserName')) { Update-PreferenceError $script:Ui }
         }
     }
     On $u.cmbLanguage 'SelectionChanged' { param($s, $e)
@@ -1325,6 +1332,17 @@ function Invoke-VersionCheck {
     }
 }
 
+function Invoke-UserNamePrompt {
+    # A name is required (it makes "My tasks" work and is the default owner of new tasks): any name will do.
+    # Closing the dialog or pressing the exit button leaves NEXORA.
+    if (-not (Test-UserNamePromptNeeded)) { return }
+    $saved = Show-ItemDialog -Title (T 'Welcome to NEXORA') `
+        -Hint (T 'What is your name? NEXORA needs it: «My tasks» shows the tasks assigned to you and the name is the default owner of new tasks. Any name will do, but it should match the owner name used on your tasks. You can change it later in Settings.') `
+        -Initial @{ Name = ''; Color = '#6B7280'; IsClosed = $false } -ShowValue $false -ShowClosed $false -ShowColor $false -MaxNameLength 80 `
+        -CancelLabel (T 'Exit NEXORA') -OnSave { param($d) Set-UserNameFromPrompt $d.Name }
+    if ($saved) { Refresh-All } else { Exit-Nexora }
+}
+
 function Close-Splash {
     # The splash is shown by Nexora.exe (if present): it closes it when the main window is ready
     $h = Get-Variable -Name NexoraHost -ValueOnly -ErrorAction SilentlyContinue
@@ -1369,6 +1387,7 @@ function Start-Nexora {
         if ($script:State.Warnings.Count -gt 0) {
             Show-Message -Title (T 'Data warning') -Text ($script:State.Warnings -join "`n`n") -Icon 'warn' | Out-Null
         }
+        try { Invoke-UserNamePrompt } catch { Write-Log "User name prompt failed: $($_.Exception.Message)" 'WARN' }
     })
     [void]$app.Run($w)
     Write-Log '--- Application exit ---'

@@ -576,6 +576,20 @@ function Reset-ScoringDefaults {
     Save-Settings; Update-AllScoresAndSave
 }
 
+function Test-UserNamePromptNeeded {
+    # A name is required to use NEXORA ("My tasks", default owner): the question is asked whenever it is missing
+    return [string]::IsNullOrWhiteSpace([string]$script:State.Settings.userName)
+}
+
+function Set-UserNameFromPrompt {
+    param([string]$Name)
+    $n = $Name.Trim()
+    if ($n.Length -eq 0) { throw (T 'The name is required.') }
+    if ($n.Length -gt 80) { throw (T 'The name cannot exceed 80 characters.') }
+    $script:State.Settings.userName = $n
+    Save-Settings
+}
+
 function Set-AppStartupPreferences {
     param(
         [bool]$OpenOnStartup = $script:State.Settings.openOnStartup,

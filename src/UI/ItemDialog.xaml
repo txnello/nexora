@@ -5,6 +5,8 @@
   <StackPanel Margin="24,20,24,20">
     <TextBlock x:Name="itmTitle" Text="New status" FontSize="19" FontWeight="SemiBold" Margin="0,0,0,16"/>
 
+    <TextBlock x:Name="itmHint" Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,-6,0,14" Visibility="Collapsed"/>
+
     <TextBlock Text="Name *" Style="{StaticResource FieldLabel}"/>
     <TextBox x:Name="itmName" MaxLength="40"/>
 

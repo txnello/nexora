@@ -79,11 +79,13 @@ function Show-Message {
 
 function Show-ItemDialog {
     # $Initial: @{ Name; Value; Color; IsClosed }. $OnSave receives a hashtable and throws if invalid.
-    param([string]$Title, [hashtable]$Initial, [bool]$ShowValue, [bool]$ShowClosed, [scriptblock]$OnSave, [bool]$ShowColor = $true, [int]$MaxNameLength = 40)
+    param([string]$Title, [hashtable]$Initial, [bool]$ShowValue, [bool]$ShowClosed, [scriptblock]$OnSave, [bool]$ShowColor = $true, [int]$MaxNameLength = 40, [string]$Hint = '', [string]$CancelLabel = '')
     $w = Import-Xaml 'ItemDialog.xaml'
-    $n = Get-Named $w 'itmTitle', 'itmName', 'itmValuePanel', 'itmValue', 'itmPalette', 'itmPreview', 'itmColor', 'itmColorPanel', 'itmClosed', 'itmError', 'itmCancel', 'itmSave'
+    $n = Get-Named $w 'itmHint', 'itmTitle', 'itmName', 'itmValuePanel', 'itmValue', 'itmPalette', 'itmPreview', 'itmColor', 'itmColorPanel', 'itmClosed', 'itmError', 'itmCancel', 'itmSave'
     $script:Id = @{ W = $w; N = $n; Saved = $false; OnSave = $OnSave; ShowValue = $ShowValue; ShowClosed = $ShowClosed }
     $w.Title = $Title; $n.itmTitle.Text = $Title
+    if ($Hint) { $n.itmHint.Text = $Hint; $n.itmHint.Visibility = 'Visible' }
+    if ($CancelLabel) { $n.itmCancel.Content = $CancelLabel }
     $n.itmName.MaxLength = $MaxNameLength
     $n.itmName.Text = [string]$Initial.Name
     if ($ShowValue) { $n.itmValuePanel.Visibility = 'Visible'; $n.itmValue.Text = ([double]$Initial.Value).ToString($script:Inv) }

@@ -33,6 +33,8 @@ Test-Case 'first launch without files: creates settings/tasks/history with defau
     Assert-Eq $st.Tasks.Count 0
     Assert-Eq $st.Settings.statuses.Count 5
     Assert-Eq $st.Settings.priorities.Count 4
+    Assert-Eq $st.Settings.language 'en' 'the default language must be English'
+    Assert-Eq $st.Settings.theme 'dark' 'the default theme must be dark'
     Assert-True $st.Settings.openOnStartup 'automatic startup not enabled by default'
     Assert-True $st.Settings.hideOnClose 'hide on close not enabled by default'
     Assert-Eq $st.Settings.preferencesVersion 2
@@ -276,6 +278,34 @@ Test-Case 'create, edit, delete level (with reassignment)' {
     Update-PriorityLevel $p.id 'Critica!' 6 '#DC2626'
     $r = Remove-PriorityLevel $p.id
     Assert-Eq $r.Moved 1; Assert-Eq (Get-TaskById $t.id).priorityId 'urgent'
+}
+
+Write-Host 'First-run name' -ForegroundColor Yellow
+Test-Case 'the name is required: asked while it is empty, empty or too long names are rejected, and the name survives a reload' {
+    $oldName = $script:State.Settings.userName
+    try {
+        $script:State.Settings.userName = ''
+        Assert-True (Test-UserNamePromptNeeded) 'the question is expected while there is no name'
+        Assert-Throws { Set-UserNameFromPrompt '   ' } 'an empty name was accepted'
+        Assert-Throws { Set-UserNameFromPrompt ('x' * 81) } 'a name over 80 characters was accepted'
+        Set-UserNameFromPrompt '  Mario Rossi '
+        Assert-Eq $script:State.Settings.userName 'Mario Rossi'
+        $st = Reload-AppState
+        Assert-Eq $st.Settings.userName 'Mario Rossi' 'name lost after reload'
+        Assert-True (-not (Test-UserNamePromptNeeded)) 'asked again although a name is saved'
+    } finally { $script:State.Settings.userName = $oldName; Save-Settings }
+}
+Test-Case 'settings of older versions without a name are asked for it; settings with a name are not' {
+    $d = Join-Path $tmp 'compat-name'; New-Item -ItemType Directory -Force $d | Out-Null
+    Set-Content (Join-Path $d 'settings.json') '{"version":1,"language":"en","codePrefix":"TSK","nextCodeNumber":1001,"userName":""}'
+    try {
+        Initialize-Storage -DataPath $d; $null = Initialize-AppState
+        Assert-True (Test-UserNamePromptNeeded) 'old settings without a name must be asked for it'
+        Set-Content (Join-Path $d 'settings.json') '{"version":1,"language":"en","codePrefix":"TSK","nextCodeNumber":1001,"userName":"Ann"}'
+        $null = Reload-AppState
+        Assert-True (-not (Test-UserNamePromptNeeded)) 'a user who already has a name must not be asked'
+        Assert-Eq $script:State.Settings.userName 'Ann'
+    } finally { Initialize-Storage -DataPath $tmp; $null = Initialize-AppState }
 }
 
 Write-Host 'Complete action' -ForegroundColor Yellow

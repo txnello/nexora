@@ -271,6 +271,23 @@ $steps.Enqueue({
     Check 'colonna data di completamento nascosta fuori da Completati' ($u.grid.Columns[$script:ColCompleted].Visibility -eq 'Collapsed')
 })
 $steps.Enqueue({
+    # first-run name question: the helper types the name and saves the dialog; the same name is restored afterwards
+    $script:State.Settings.userName = ''
+    Check 'nome obbligatorio: la domanda serve se manca il nome' (Test-UserNamePromptNeeded)
+    Queue-ItemDialogSave 'Anna Rossi'
+    Invoke-UserNamePrompt
+    Check 'nome obbligatorio: nome salvato e domanda non piu'' necessaria' ($script:State.Settings.userName -eq 'Anna Rossi' -and -not (Test-UserNamePromptNeeded))
+    # Settings: the name field is required like the other preference fields
+    $u.txtUserName.Text = ''; [void](Get-PreferenceValidation $u)
+    Check 'Impostazioni: nome vuoto segnalato come non valido' ($u.txtUserName.Tag -eq 'invalid')
+    $u.txtUserName.Text = 'Anna Rossi'; [void](Get-PreferenceValidation $u)
+    Check 'Impostazioni: nome valido, campo non segnalato' ($u.txtUserName.Tag -ne 'invalid')
+    # "My tasks" without a name shows a message bar: its top corners must be rounded like the card around it
+    $script:State.Settings.userName = ''; $u.navMine.IsChecked = $true
+    $infoBar = $u.txtInfo.Parent
+    Check 'My tasks senza nome: messaggio visibile con gli angoli superiori arrotondati' ($u.txtInfo.Visibility -eq 'Visible' -and $infoBar.CornerRadius.TopLeft -ge 8 -and $infoBar.CornerRadius.TopRight -ge 8) "raggio=$($infoBar.CornerRadius)"
+    Shot '03b-mine-no-name'
+    $script:State.Settings.userName = 'Anna Rossi'; $u.navDashboard.IsChecked = $true
     # Complete button: a selected open task goes straight to Done (a temporary task keeps the other checks unchanged)
     $cmpTask = Add-AppTask @{ Code = 'CMP-UI'; Title = 'Task per il pulsante Completa'; Description = ''; Referent = ''; Link = ''; StatusId = 'todo'; PriorityId = 'urgent'; DueDate = $null }
     Refresh-All
