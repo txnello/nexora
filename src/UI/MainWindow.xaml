@@ -309,7 +309,7 @@
 
         <!-- ===================== Settings ===================== -->
         <ScrollViewer x:Name="settingsView" Grid.Row="1" Grid.RowSpan="3" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" Margin="0,0,-12,0">
-          <StackPanel MaxWidth="1000" HorizontalAlignment="Left" Margin="0,0,12,24">
+          <StackPanel Margin="0,0,12,24">
 
             <!-- Statuses -->
             <Border Style="{StaticResource Card}" Margin="0,0,0,16">
