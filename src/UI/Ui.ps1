@@ -18,7 +18,7 @@ $script:MainNames = @(
     'colSide', 'txtBrand', 'btnTheme', 'lblTheme', 'btnAbout', 'lblAbout', 'btnDonate', 'lblDonate', 'navDashboard', 'navAll', 'navMine', 'navByRef', 'navByClient', 'navByProject', 'navDone', 'navSettings',
     'lblDashboard', 'lblAll', 'lblMine', 'lblByRef', 'lblByClient', 'lblByProject', 'lblDone', 'lblSettings', 'btnNew', 'txtTitle', 'txtSubtitle', 'statsPanel',
     'cardOpen', 'cardUrgent', 'cardOverdue', 'cardDone', 'txtOpen', 'txtUrgent', 'txtOverdue', 'txtDone', 'filterPanel', 'txtSearch', 'searchHint',
-    'cmbStatus', 'cmbPriority', 'cmbClient', 'cmbProject', 'cmbReferent', 'btnClear', 'btnEdit', 'btnReminder', 'btnDuplicate', 'btnDelete', 'tableCard', 'txtInfo', 'grid',
+    'cmbStatus', 'cmbPriority', 'cmbClient', 'cmbProject', 'cmbReferent', 'btnClear', 'btnEdit', 'btnReminder', 'btnComplete', 'btnDuplicate', 'btnDelete', 'tableCard', 'txtInfo', 'grid',
     'emptyState', 'emptyIcon', 'emptyTitle', 'emptyText', 'btnEmptyNew', 'settingsView', 'lstStatuses', 'btnStAdd', 'btnStEdit', 'btnStDel',
     'btnStUp', 'btnStDown', 'lstPriorities', 'btnPrAdd', 'btnPrEdit', 'btnPrDel', 'lstReferents', 'btnRfAdd', 'btnRfEdit', 'btnRfDel', 'btnRfUp', 'btnRfDown', 'lstProjects', 'btnPjAdd', 'btnPjEdit', 'btnPjDel', 'btnPjUp', 'btnPjDown', 'lstClients', 'btnClAdd', 'btnClEdit', 'btnClDel', 'btnClUp', 'btnClDown', 'sldPriority', 'sldDeadline', 'sldReminders', 'sldAge',
     'valPriority', 'valDeadline', 'valReminders', 'valAge', 'txtWeightSum', 'txtNoDue', 'txtAgeCap', 'txtUrgent2', 'txtParamsError', 'btnParamsSave', 'btnWeightsReset',
@@ -283,6 +283,8 @@ function Update-ActionButtons {
     $u.btnDuplicate.ToolTip = $(if ($multiple) { (T 'Duplicate checked tasks') } else { (T 'Duplicate the selected task') })
     $u.btnDelete.ToolTip = $(if ($multiple) { (T 'Delete checked tasks (Del)') } else { (T 'Delete the selected task (Del)') })
     if ($has -and $u.grid.SelectedItem.IsClosed) { $u.btnReminder.IsEnabled = $false }
+    # "Complete" needs a selected task that is still open
+    $u.btnComplete.IsEnabled = ($has -and -not $u.grid.SelectedItem.IsClosed)
 }
 
 function Update-FilterCombos {
@@ -419,6 +421,14 @@ function Invoke-Reminder {
     Show-Toast (T 'Reminder #{0} logged on {1}' $t.reminders $t.code)
 }
 
+function Invoke-CompleteTask {
+    param([string]$Id)
+    if (-not $Id) { return }
+    $t = Complete-AppTask $Id
+    Refresh-All
+    Show-Toast (T 'Task {0} completed' $t.code)
+}
+
 function Invoke-SetStatus {
     param([string]$Id, [string]$StatusId)
     $t = Set-AppTaskStatus $Id $StatusId
@@ -465,6 +475,7 @@ function Show-RowMenu {
     }
     [void](& $add (T 'Open / edit') ([string][char]0xE70F) 'open')
     [void](& $add (T 'Log reminder') ([string][char]0xE7ED) 'remind' (-not $r.IsClosed))
+    [void](& $add (T 'Complete') ([string][char]0xE73E) 'complete' (-not $r.IsClosed))
     $sub = & $add (T 'Change status') ([string][char]0xE8AB) 'none'
     foreach ($s in $script:State.Settings.statuses) {
         $si = New-Object System.Windows.Controls.MenuItem
@@ -1221,6 +1232,7 @@ function New-MainWindow {
     On $u.btnEmptyNew 'Click' { param($s, $e) Invoke-NewTask }
     On $u.btnEdit 'Click' { param($s, $e) Invoke-EditTask (Get-SelectedTaskId) }
     On $u.btnReminder 'Click' { param($s, $e) Invoke-Reminder (Get-SelectedTaskId) }
+    On $u.btnComplete 'Click' { param($s, $e) Invoke-CompleteTask (Get-SelectedTaskId) }
     On $u.btnDuplicate 'Click' { param($s, $e) Invoke-DuplicateTask (Get-SelectedTaskId) }
     On $u.btnDelete 'Click' { param($s, $e) Invoke-DeleteTask (Get-SelectedTaskId) }
     $script:OpenTaskLinkCommand = [System.Windows.Input.RoutedUICommand]::new('Open task link', 'OpenTaskLink', [System.Windows.Controls.Button])
@@ -1271,6 +1283,7 @@ function New-MainWindow {
             if (-not $id) { return }
             if ($cmd -eq 'open') { Invoke-EditTask $id }
             elseif ($cmd -eq 'remind') { Invoke-Reminder $id }
+            elseif ($cmd -eq 'complete') { Invoke-CompleteTask $id }
             elseif ($cmd -eq 'dup') { Invoke-DuplicateTask $id }
             elseif ($cmd -eq 'del') { Invoke-DeleteTask $id }
             elseif ($cmd -like 'status:*') { Invoke-SetStatus $id $cmd.Substring(7) }

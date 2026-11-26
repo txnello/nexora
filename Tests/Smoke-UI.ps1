@@ -271,6 +271,31 @@ $steps.Enqueue({
     Check 'colonna data di completamento nascosta fuori da Completati' ($u.grid.Columns[$script:ColCompleted].Visibility -eq 'Collapsed')
 })
 $steps.Enqueue({
+    # Complete button: a selected open task goes straight to Done (a temporary task keeps the other checks unchanged)
+    $cmpTask = Add-AppTask @{ Code = 'CMP-UI'; Title = 'Task per il pulsante Completa'; Description = ''; Referent = ''; Link = ''; StatusId = 'todo'; PriorityId = 'urgent'; DueDate = $null }
+    Refresh-All
+    $u.grid.SelectedItem = $null; Update-ActionButtons
+    Check 'pulsante Completa: disabilitato senza selezione' (-not $u.btnComplete.IsEnabled)
+    $cmpRow = $u.grid.Items | Where-Object { $_.Id -eq $cmpTask.id } | Select-Object -First 1
+    $u.grid.SelectedItem = $cmpRow; Update-ActionButtons
+    Check 'pulsante Completa: abilitato su un task aperto' ($u.btnComplete.IsEnabled)
+    $cmpMenu = Show-RowMenu
+    $cmpItem = $u.grid.ContextMenu.Items | Where-Object { $_.Tag -eq 'complete' } | Select-Object -First 1
+    Check 'menu contestuale: voce Completa presente e attiva su un task aperto' ($cmpMenu -and $null -ne $cmpItem -and $cmpItem.IsEnabled)
+    $u.btnComplete.RaiseEvent((New-Object System.Windows.RoutedEventArgs([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)))
+    $cmpDone = Get-TaskById $cmpTask.id
+    Check 'pulsante Completa: il task passa in stato Done con data di completamento' ($cmpDone.statusId -eq 'done' -and [bool]$cmpDone.completedAt) "stato=$($cmpDone.statusId)"
+    Check 'pulsante Completa: il task esce dall''elenco dei task aperti' ($null -eq ($u.grid.Items | Where-Object { $_.Id -eq $cmpTask.id }))
+    $u.navAll.IsChecked = $true
+    $cmpRow = $u.grid.Items | Where-Object { $_.Id -eq $cmpTask.id } | Select-Object -First 1
+    $u.grid.SelectedItem = $cmpRow; Update-ActionButtons
+    Check 'pulsante Completa: disabilitato su un task gia'' completato' ($null -ne $cmpRow -and -not $u.btnComplete.IsEnabled)
+    [void](Show-RowMenu)
+    $cmpItem = $u.grid.ContextMenu.Items | Where-Object { $_.Tag -eq 'complete' } | Select-Object -First 1
+    Check 'menu contestuale: voce Completa disattivata su un task gia'' completato' ($null -ne $cmpItem -and -not $cmpItem.IsEnabled)
+    Remove-AppTask $cmpTask.id
+    $u.navDashboard.IsChecked = $true
+    Refresh-All
     # selection + quick reminder
     $u.grid.SelectedIndex = 1
     $id = Get-SelectedTaskId; $before = (Get-TaskById $id).reminders

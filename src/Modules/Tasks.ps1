@@ -347,6 +347,26 @@ function Set-AppTaskStatus {
     return Update-AppTask $Id $in
 }
 
+function Get-DoneStatus {
+    # Status used by the "Complete" action: the default 'done' status while it is still a closed one,
+    # otherwise the first closed status. $null when no closed status exists.
+    $sts = @($script:State.Settings.statuses)
+    $done = $sts | Where-Object { $_.id -eq 'done' -and $_.isClosed } | Select-Object -First 1
+    if ($null -eq $done) { $done = $sts | Where-Object { $_.isClosed } | Select-Object -First 1 }
+    return $done
+}
+
+function Complete-AppTask {
+    # Moves a task straight to the "done" status (completion date, history and ranking follow from Set-AppTaskStatus)
+    param([string]$Id)
+    $t = Get-TaskById $Id
+    if ($null -eq $t) { throw (T 'Task not found.') }
+    $done = Get-DoneStatus
+    if ($null -eq $done) { throw (T 'There is no «closed» status to complete tasks with. Mark a status as closed in Settings.') }
+    if (Test-StatusClosed $t.statusId $script:State.Settings.statuses) { return $t }   # already completed: nothing to do
+    return Set-AppTaskStatus $Id $done.id
+}
+
 function Remove-AppTask {
     param([string]$Id)
     $t = Get-TaskById $Id

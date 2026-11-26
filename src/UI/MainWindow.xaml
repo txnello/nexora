@@ -149,6 +149,9 @@
           <Button x:Name="btnReminder" Margin="0,0,8,8" ToolTip="Log a reminder on the selected task">
             <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE7ED;" FontFamily="{StaticResource IconFont}" Margin="0,1,7,0" VerticalAlignment="Center"/><TextBlock Text="Reminder"/></StackPanel>
           </Button>
+          <Button x:Name="btnComplete" Margin="0,0,8,8" ToolTip="Mark the selected task as completed">
+            <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE73E;" FontFamily="{StaticResource IconFont}" Margin="0,1,7,0" VerticalAlignment="Center"/><TextBlock Text="Complete"/></StackPanel>
+          </Button>
           <Button x:Name="btnDuplicate" Margin="0,0,8,8" ToolTip="Duplicate the selected task">
             <StackPanel Orientation="Horizontal"><TextBlock Text="&#xE8C8;" FontFamily="{StaticResource IconFont}" Margin="0,1,7,0" VerticalAlignment="Center"/><TextBlock Text="Duplicate"/></StackPanel>
           </Button>

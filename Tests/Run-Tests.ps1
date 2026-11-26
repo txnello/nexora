@@ -278,6 +278,49 @@ Test-Case 'create, edit, delete level (with reassignment)' {
     Assert-Eq $r.Moved 1; Assert-Eq (Get-TaskById $t.id).priorityId 'urgent'
 }
 
+Write-Host 'Complete action' -ForegroundColor Yellow
+Test-Case 'Complete moves a task straight to Done with completion date, history and no ranking score' {
+    $in = New-In 'CMP-1' 'da completare'; $in.Project = 'Pj-Complete'; $in.Client = 'Cl-Complete'
+    $t = Add-AppTask $in
+    Assert-True ($null -ne (Get-TaskById $t.id).score) 'an open task should be ranked'
+    $null = Complete-AppTask $t.id
+    $x = Get-TaskById $t.id
+    Assert-Eq $x.statusId 'done'
+    Assert-True ([bool]$x.completedAt) 'completion date missing'
+    Assert-True ($null -eq $x.score) 'a completed task is still ranked'
+    Assert-Eq $x.project 'Pj-Complete' 'completing cleared the project'
+    Assert-Eq $x.client 'Cl-Complete' 'completing cleared the client'
+    Assert-True ($script:State.History | Where-Object { $_.taskId -eq $t.id -and $_.type -eq 'stato' }) 'status change not logged'
+}
+Test-Case 'Complete on an already completed task changes nothing' {
+    $t = Add-AppTask (New-In 'CMP-2' 'gia completato' $null 'medium' 'done')
+    $when = (Get-TaskById $t.id).completedAt
+    $entries = @($script:State.History | Where-Object { $_.taskId -eq $t.id }).Count
+    $null = Complete-AppTask $t.id
+    Assert-Eq (Get-TaskById $t.id).completedAt $when 'completion date was overwritten'
+    Assert-Eq @($script:State.History | Where-Object { $_.taskId -eq $t.id }).Count $entries 'a history entry was added'
+}
+Test-Case 'Complete picks the default Done status, falls back to another closed status and fails clearly when none exists' {
+    $doneName = (Get-StatusById 'done').name; $doneColor = (Get-StatusById 'done').color
+    $archived = Add-Status 'Archived test' '#888888' $true
+    try {
+        Assert-Eq (Get-DoneStatus).id 'done' 'the default Done status must win while it is closed'
+        Update-Status 'done' $doneName $doneColor $false      # Done is no longer a closed status
+        Assert-Eq (Get-DoneStatus).id $archived.id 'no fallback to the other closed status'
+        $t = Add-AppTask (New-In 'CMP-3' 'fallback')
+        $null = Complete-AppTask $t.id
+        Assert-Eq (Get-TaskById $t.id).statusId $archived.id
+        Update-Status $archived.id 'Archived test' '#888888' $false   # no closed status left
+        Assert-True ($null -eq (Get-DoneStatus)) 'a closed status was found'
+        $t2 = Add-AppTask (New-In 'CMP-4' 'nessuno stato chiuso')
+        Assert-Throws { Complete-AppTask $t2.id } 'completing without a closed status did not fail'
+        Assert-Eq (Get-TaskById $t2.id).statusId 'todo' 'the task changed despite the failure'
+    } finally {
+        Update-Status 'done' $doneName $doneColor $true
+        if (Get-StatusById $archived.id) { $null = Remove-Status $archived.id }
+    }
+}
+
 Write-Host 'Custom owners' -ForegroundColor Yellow
 Test-Case 'create, rename and reorder owner' {
     $r = Add-Referent 'Mario Rossi'
