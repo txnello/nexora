@@ -34,11 +34,11 @@ function Get-DefaultSettings {
         projects       = ConvertTo-List @()
         clients        = ConvertTo-List @()
         statuses       = ConvertTo-List @(
-            [pscustomobject]@{ id = 'todo';    name = 'To do';        color = '#6B7280'; isClosed = $false }
-            [pscustomobject]@{ id = 'doing';   name = 'In progress'; color = '#3B82F6'; isClosed = $false }
-            [pscustomobject]@{ id = 'waiting'; name = 'Waiting';      color = '#F59E0B'; isClosed = $false }
-            [pscustomobject]@{ id = 'blocked'; name = 'Blocked';       color = '#EF4444'; isClosed = $false }
-            [pscustomobject]@{ id = 'done';    name = 'Done';     color = '#10B981'; isClosed = $true }
+            [pscustomobject]@{ id = 'todo';    name = 'To do';        color = '#6B7280'; isClosed = $false; scoreValue = 10 }
+            [pscustomobject]@{ id = 'doing';   name = 'In progress'; color = '#3B82F6'; isClosed = $false; scoreValue = 10 }
+            [pscustomobject]@{ id = 'waiting'; name = 'Waiting';      color = '#F59E0B'; isClosed = $false; scoreValue = 7 }    # new installs only: existing files without a weight stay at 10
+            [pscustomobject]@{ id = 'blocked'; name = 'Blocked';       color = '#EF4444'; isClosed = $false; scoreValue = 5 }
+            [pscustomobject]@{ id = 'done';    name = 'Done';     color = '#10B981'; isClosed = $true; scoreValue = 10 }
         )
         priorities     = ConvertTo-List @(
             [pscustomobject]@{ id = 'low';    name = 'Low';   value = 1; color = '#6B7280' }
@@ -144,7 +144,8 @@ function Repair-Settings {
         if ($id -eq '' -or $name -eq '' -or $seen.ContainsKey($id)) { continue }
         $seen[$id] = $true
         $col = [string](Get-Prop $s 'color' '#6B7280'); if (-not (Test-HexColor $col)) { $col = '#6B7280' }
-        $st.Add([pscustomobject]@{ id = $id; name = $name; color = $col.ToUpper(); isClosed = [bool](Get-Prop $s 'isClosed' $false) })
+        $sv = [int][math]::Round((Get-BoundedNumber (Get-Prop $s 'scoreValue' 10) 10 1 10))   # absent/invalid = 10 (no reduction)
+        $st.Add([pscustomobject]@{ id = $id; name = $name; color = $col.ToUpper(); isClosed = [bool](Get-Prop $s 'isClosed' $false); scoreValue = $sv })
     }
     if ($st.Count -eq 0) { $st = $d.statuses }
     if (-not ($st | Where-Object { -not $_.isClosed })) { $st[0].isClosed = $false }
@@ -255,24 +256,39 @@ function Assert-ValidName {
     }
 }
 
+function Assert-ValidScoreValue {
+    param($Value)
+    $v = 0.0
+    if (-not [double]::TryParse([string]$Value, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$v) -or
+        $v -ne [math]::Floor($v) -or $v -lt 1 -or $v -gt 10) {
+        throw (T 'The score weight must be a whole number from 1 to 10.')
+    }
+    return [int]$v
+}
+
 function Add-Status {
-    param([string]$Name, [string]$Color = '#6B7280', [bool]$IsClosed = $false)
+    param([string]$Name, [string]$Color = '#6B7280', [bool]$IsClosed = $false, $ScoreValue = 10)
     $sts = $script:State.Settings.statuses
     Assert-ValidName $Name $sts '' 'status'
     if (-not (Test-HexColor $Color)) { throw (T 'Invalid color (use the #RRGGBB format).') }
-    $s = [pscustomobject]@{ id = 'st' + (New-Id).Substring(0, 8); name = $Name.Trim(); color = $Color.ToUpper(); isClosed = $IsClosed }
+    $sv = Assert-ValidScoreValue $ScoreValue
+    $s = [pscustomobject]@{ id = 'st' + (New-Id).Substring(0, 8); name = $Name.Trim(); color = $Color.ToUpper(); isClosed = $IsClosed; scoreValue = $sv }
     $sts.Add($s)
     Save-Settings; Update-AllScoresAndSave
     return $s
 }
 
 function Update-Status {
-    param([string]$Id, [string]$Name, [string]$Color, [bool]$IsClosed)
+    param([string]$Id, [string]$Name, [string]$Color, [bool]$IsClosed, $ScoreValue = $null)   # $null = keep the current weight
     $sts = $script:State.Settings.statuses
     $s = Get-StatusById $Id
     if ($null -eq $s) { throw (T 'Status not found.') }
     Assert-ValidName $Name $sts $Id 'status'
     if (-not (Test-HexColor $Color)) { throw (T 'Invalid color (use the #RRGGBB format).') }
+    if ($null -ne $ScoreValue) {
+        $sv = Assert-ValidScoreValue $ScoreValue
+        $s | Add-Member -NotePropertyName scoreValue -NotePropertyValue $sv -Force   # -Force: statuses of older files have no such property
+    }
     if (-not $s.isClosed -and $IsClosed) {
         if (-not ($sts | Where-Object { $_.id -ne $Id -and -not $_.isClosed })) { throw (T 'There must be at least one open status.') }
     }

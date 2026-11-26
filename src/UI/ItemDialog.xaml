@@ -11,7 +11,7 @@
     <TextBox x:Name="itmName" MaxLength="40"/>
 
     <StackPanel x:Name="itmValuePanel" Margin="0,14,0,0" Visibility="Collapsed">
-      <TextBlock Text="Numeric value (higher = more important) *" Style="{StaticResource FieldLabel}"/>
+      <TextBlock x:Name="itmValueLabel" Text="Numeric value (higher = more important) *" Style="{StaticResource FieldLabel}"/>
       <TextBox x:Name="itmValue" MaxLength="8"/>
     </StackPanel>
 

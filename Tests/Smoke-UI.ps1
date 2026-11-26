@@ -381,10 +381,11 @@ $steps.Enqueue({
     $n.txtTitle.Text = 'Task creato dal test UI'
     $n.txtLink.Text = 'https://example.test/new-task'
     Check 'referente senza assegnazione disponibile' ($null -ne ($n.cmbReferent.Items | Where-Object { -not $_.IsCreateAction -and $_.value -eq '' }))
-    Queue-ItemDialogSave 'Stato creato dal task' '' -TestValidation
+    Queue-ItemDialogSave 'Stato creato dal task' '8' -TestValidation
     $n.cmbStatus.SelectedIndex = $n.cmbStatus.Items.Count - 1
     $statusCreated = $n.cmbStatus.SelectedItem.name
     Check 'creazione stato dal menu del task' ($statusCreated -eq 'Stato creato dal task' -and $n.txtTitle.Text -eq 'Task creato dal test UI') $statusCreated
+    Check 'creazione stato: il peso nel punteggio scelto nel dialogo e'' salvato' ((Get-StatusScoreValue $n.cmbStatus.SelectedItem.id $script:State.Settings.statuses) -eq 8) "peso=$((Get-StatusScoreValue $n.cmbStatus.SelectedItem.id $script:State.Settings.statuses))"
     Queue-ItemDialogSave 'Priorità creata dal task' '12' -TestValidation
     $n.cmbPriority.SelectedIndex = $n.cmbPriority.Items.Count - 1
     $priorityCreated = $n.cmbPriority.SelectedItem.name

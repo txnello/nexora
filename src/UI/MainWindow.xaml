@@ -320,7 +320,7 @@
                 <StackPanel>
                   <TextBlock Text="Statuses" Style="{StaticResource SectionTitle}"/>
                   <TextBlock Style="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12"
-                             Text="Create, edit, reorder or delete statuses. «Closed» statuses exclude a task from the priority ranking."/>
+                             Text="Create, edit, reorder or delete statuses. «Closed» statuses exclude a task from the priority ranking. The score weight (1-10) lowers the score of the tasks in that status: 10 means no reduction."/>
                   <ListBox x:Name="lstStatuses" Height="220">
                     <ListBox.ItemTemplate><DataTemplate>
                       <Grid>

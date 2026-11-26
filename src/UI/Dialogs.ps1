@@ -79,13 +79,15 @@ function Show-Message {
 
 function Show-ItemDialog {
     # $Initial: @{ Name; Value; Color; IsClosed }. $OnSave receives a hashtable and throws if invalid.
-    param([string]$Title, [hashtable]$Initial, [bool]$ShowValue, [bool]$ShowClosed, [scriptblock]$OnSave, [bool]$ShowColor = $true, [int]$MaxNameLength = 40, [string]$Hint = '', [string]$CancelLabel = '')
+    param([string]$Title, [hashtable]$Initial, [bool]$ShowValue, [bool]$ShowClosed, [scriptblock]$OnSave, [bool]$ShowColor = $true, [int]$MaxNameLength = 40, [string]$Hint = '', [string]$CancelLabel = '',
+        [string]$ValueLabel = '', $ValueMin = $null, $ValueMax = $null, [bool]$ValueInteger = $false)
     $w = Import-Xaml 'ItemDialog.xaml'
-    $n = Get-Named $w 'itmHint', 'itmTitle', 'itmName', 'itmValuePanel', 'itmValue', 'itmPalette', 'itmPreview', 'itmColor', 'itmColorPanel', 'itmClosed', 'itmError', 'itmCancel', 'itmSave'
-    $script:Id = @{ W = $w; N = $n; Saved = $false; OnSave = $OnSave; ShowValue = $ShowValue; ShowClosed = $ShowClosed }
+    $n = Get-Named $w 'itmHint', 'itmValueLabel', 'itmTitle', 'itmName', 'itmValuePanel', 'itmValue', 'itmPalette', 'itmPreview', 'itmColor', 'itmColorPanel', 'itmClosed', 'itmError', 'itmCancel', 'itmSave'
+    $script:Id = @{ W = $w; N = $n; Saved = $false; OnSave = $OnSave; ShowValue = $ShowValue; ShowClosed = $ShowClosed; ValueMin = $ValueMin; ValueMax = $ValueMax; ValueInteger = $ValueInteger }
     $w.Title = $Title; $n.itmTitle.Text = $Title
     if ($Hint) { $n.itmHint.Text = $Hint; $n.itmHint.Visibility = 'Visible' }
     if ($CancelLabel) { $n.itmCancel.Content = $CancelLabel }
+    if ($ValueLabel) { $n.itmValueLabel.Text = $ValueLabel }
     $n.itmName.MaxLength = $MaxNameLength
     $n.itmName.Text = [string]$Initial.Name
     if ($ShowValue) { $n.itmValuePanel.Visibility = 'Visible'; $n.itmValue.Text = ([double]$Initial.Value).ToString($script:Inv) }
@@ -127,6 +129,10 @@ function Show-ItemDialog {
                 if (-not [double]::TryParse($nn.itmValue.Text.Trim().Replace(',', '.'), [System.Globalization.NumberStyles]::Float, $script:Inv, [ref]$v)) {
                     Set-FieldInvalid $nn.itmValue $true
                     throw (T 'The numeric value is not valid.')
+                }
+                if ($null -ne $d.ValueMin -and ($v -lt $d.ValueMin -or $v -gt $d.ValueMax -or ($d.ValueInteger -and $v -ne [math]::Floor($v)))) {
+                    Set-FieldInvalid $nn.itmValue $true
+                    throw (T 'The value must be a whole number between {0} and {1}.' $d.ValueMin $d.ValueMax)
                 }
                 $data.Value = $v
             }
@@ -285,8 +291,9 @@ function Show-TaskDialog {
         if (-not $selected.IsCreateAction) { Set-FieldInvalid $s $false; $td.LastStatusId = $selected.id; return }
         $td.HandlingSelection = $true
         try { $s.SelectedItem = Get-StatusById $td.LastStatusId } finally { $td.HandlingSelection = $false }
-        $saved = Show-ItemDialog -Title (T 'New status') -Initial @{ Name = ''; Color = '#3B82F6'; IsClosed = $false } -ShowValue $false -ShowClosed $true -OnSave {
-            param($d) $created = Add-Status $d.Name $d.Color $d.IsClosed; $script:Td.CreatedStatusId = $created.id }
+        $saved = Show-ItemDialog -Title (T 'New status') -Initial @{ Name = ''; Color = '#3B82F6'; IsClosed = $false; Value = 10 } -ShowValue $true -ShowClosed $true `
+            -ValueLabel (T 'Score weight (1-10, 10 = no reduction) *') -ValueMin 1 -ValueMax 10 -ValueInteger $true -OnSave {
+            param($d) $created = Add-Status $d.Name $d.Color $d.IsClosed ([int]$d.Value); $script:Td.CreatedStatusId = $created.id }
         if ($saved) {
             $id = $td.CreatedStatusId
             $td.HandlingSelection = $true
@@ -516,6 +523,8 @@ function Update-TaskDialogSide {
             (T 'Due date'), $b.Deadline.ToString('0', $script:UiCulture), $w.deadline,
             (T 'Reminders'), $b.Reminders.ToString('0', $script:UiCulture), $w.reminders,
             (T 'Age'), $b.Age.ToString('0', $script:UiCulture), $w.age)
+        # the four lines above add up to the score only while the status weight is 10: otherwise show the reduction
+        if ($b.StatusValue -lt 10) { $n.txtBreakdown.Text += ("`n{0}: ×{1}/10" -f (T 'Status weight'), $b.StatusValue) }
     }
     $n.txtRemCount.Text = [string]$t.reminders
     $last = ConvertTo-DateTimeValue $t.lastReminderAt

@@ -581,7 +581,7 @@ function Load-SettingsView {
     $selR = $(if ($u.lstReferents.SelectedItem) { $u.lstReferents.SelectedItem.id } else { $null })
     $selPj = $(if ($u.lstProjects.SelectedItem) { $u.lstProjects.SelectedItem.id } else { $null })
     $selCl = $(if ($u.lstClients.SelectedItem) { $u.lstClients.SelectedItem.id } else { $null })
-    $sl = @($s.statuses | ForEach-Object { [pscustomobject]@{ id = $_.id; name = $_.name; color = $_.color; kind = $(if ($_.isClosed) { (T 'closed') } else { (T 'open') }) } })
+    $sl = @($s.statuses | ForEach-Object { [pscustomobject]@{ id = $_.id; name = $_.name; color = $_.color; kind = $(if ($_.isClosed) { (T 'closed') } else { '{0} · {1}/10' -f (T 'open'), (Get-StatusScoreValue $_.id $s.statuses) }) } })
     $u.lstStatuses.ItemsSource = $sl
     if ($selS) { $u.lstStatuses.SelectedItem = ($sl | Where-Object { $_.id -eq $selS } | Select-Object -First 1) }
     $pl = @($s.priorities | Sort-Object { [double]$_.value } | ForEach-Object { [pscustomobject]@{ id = $_.id; name = $_.name; color = $_.color; kind = (T 'value {0}' $_.value) } })
@@ -838,16 +838,18 @@ function Register-SettingsHandlers {
 
     # ---- statuses
     On $u.btnStAdd 'Click' { param($s, $e)
-        $saved = Show-ItemDialog -Title (T 'New status') -Initial @{ Name = ''; Color = '#3B82F6'; IsClosed = $false } -ShowValue $false -ShowClosed $true -OnSave {
-            param($d) $null = Add-Status $d.Name $d.Color $d.IsClosed }
+        $saved = Show-ItemDialog -Title (T 'New status') -Initial @{ Name = ''; Color = '#3B82F6'; IsClosed = $false; Value = 10 } -ShowValue $true -ShowClosed $true `
+            -ValueLabel (T 'Score weight (1-10, 10 = no reduction) *') -ValueMin 1 -ValueMax 10 -ValueInteger $true -OnSave {
+            param($d) $null = Add-Status $d.Name $d.Color $d.IsClosed ([int]$d.Value) }
         if ($saved) { Load-SettingsView; Update-FilterCombos; Show-Toast (T 'Status created') }
     }
     On $u.btnStEdit 'Click' { param($s, $e)
         $id = Get-ListSelectionId $script:Ui.lstStatuses (T 'a status'); if (-not $id) { return }
         $st = Get-StatusById $id
         $script:EditId = $id
-        $saved = Show-ItemDialog -Title (T 'Edit status') -Initial @{ Name = $st.name; Color = $st.color; IsClosed = $st.isClosed } -ShowValue $false -ShowClosed $true -OnSave {
-            param($d) Update-Status $script:EditId $d.Name $d.Color $d.IsClosed }
+        $saved = Show-ItemDialog -Title (T 'Edit status') -Initial @{ Name = $st.name; Color = $st.color; IsClosed = $st.isClosed; Value = (Get-StatusScoreValue $st.id $script:State.Settings.statuses) } -ShowValue $true -ShowClosed $true `
+            -ValueLabel (T 'Score weight (1-10, 10 = no reduction) *') -ValueMin 1 -ValueMax 10 -ValueInteger $true -OnSave {
+            param($d) Update-Status $script:EditId $d.Name $d.Color $d.IsClosed ([int]$d.Value) }
         if ($saved) { Load-SettingsView; Refresh-All; Show-Toast (T 'Status updated') }
     }
     On $u.btnStDel 'Click' { param($s, $e)

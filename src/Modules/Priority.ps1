@@ -7,6 +7,18 @@
 #                            no deadline = configurable neutral value (noDueScore)
 #   L  reminders         : 100 * (1 - exp(-n / curve))  -> increasing but saturating (never above 100)
 #   A  age               : min(days_open, ageCapDays) / ageCapDays * 100 -> max cap
+# The result is then multiplied by the weight of the task's status (1..10, 10 = no reduction):  score = score * weight / 10
+# Statuses written by older versions have no weight: they count as 10, so their scores do not change.
+
+function Get-StatusScoreValue {
+    # Weight of a status in the score (1..10, whole number). Missing or invalid values count as 10.
+    param($StatusId, $Statuses)
+    $st = @($Statuses) | Where-Object { $_.id -eq $StatusId } | Select-Object -First 1
+    if ($null -eq $st -or $null -eq $st.PSObject.Properties['scoreValue']) { return 10 }
+    $v = 0.0
+    if (-not [double]::TryParse([string]$st.scoreValue, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$v)) { return 10 }
+    return [int][math]::Max(1, [math]::Min(10, [math]::Round($v)))
+}
 
 function Get-PriorityFactor {
     param($PriorityId, $Priorities)
@@ -54,8 +66,11 @@ function Get-ScoreBreakdown {
     $l = Get-ReminderFactor -Count ([int]$Task.reminders) -Scoring $sc
     $a = Get-AgeFactor -CreatedAt $Task.createdAt -Today $Today -Scoring $sc
     $total = ($p * $w.priority + $s * $w.deadline + $l * $w.reminders + $a * $w.age) / 100.0
+    $statusValue = Get-StatusScoreValue -StatusId $Task.statusId -Statuses $Settings.statuses
+    $total = $total * $statusValue / 10.0
     $total = [math]::Max(0.0, [math]::Min(100.0, $total))
     [pscustomobject]@{
+        StatusValue = $statusValue
         Priority  = [math]::Round($p, 1)
         Deadline  = [math]::Round($s, 1)
         Reminders = [math]::Round($l, 1)

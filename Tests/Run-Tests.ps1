@@ -280,6 +280,68 @@ Test-Case 'create, edit, delete level (with reassignment)' {
     Assert-Eq $r.Moved 1; Assert-Eq (Get-TaskById $t.id).priorityId 'urgent'
 }
 
+Write-Host 'Status score weight' -ForegroundColor Yellow
+Test-Case 'a status weight scales the score; a missing weight counts as 10 and changes nothing' {
+    $t = Add-AppTask (New-In 'SW-1' 'peso stato' (Get-Date).Date.AddDays(3) 'high' 'todo')
+    $base = (Get-TaskById $t.id).score
+    # a brand-new data folder: everything weighs 10 except Waiting (7) and Blocked (5)
+    $defaults = @{ todo = 10; doing = 10; waiting = 7; blocked = 5; done = 10 }
+    foreach ($k in $defaults.Keys) { Assert-Eq (Get-StatusScoreValue $k $script:State.Settings.statuses) $defaults[$k] "default weight of '$k'" }
+    # statuses of older files / hand-built objects have no weight: 10, so scores are unchanged
+    $legacy = [pscustomobject]@{ id = 'x'; name = 'x'; color = '#000000'; isClosed = $false }
+    Assert-Eq (Get-StatusScoreValue 'x' @($legacy)) 10 'a status without weight must count as 10'
+    $w = Get-StatusById 'waiting'; $name = $w.name; $color = $w.color; $original = Get-StatusScoreValue 'waiting' $script:State.Settings.statuses
+    try {
+        Update-Status 'waiting' $name $color $false 5
+        $null = Set-AppTaskStatus $t.id 'waiting'
+        $half = (Get-TaskById $t.id).score
+        Assert-True ([math]::Abs($half - $base * 0.5) -le 0.11) "weight 5 should halve $base, found $half"
+        Assert-Eq (Get-ScoreBreakdown (Get-TaskById $t.id) $script:State.Settings).StatusValue 5
+        Update-Status 'waiting' $name $color $false 10
+        Assert-Eq (Get-TaskById $t.id).score $base 'weight 10 must give back the original score'
+    } finally { Update-Status 'waiting' $name $color $false $original }
+}
+Test-Case 'files of older versions keep weight 10 on every status, including Waiting and Blocked (the new defaults apply to new folders only)' {
+    $d = Join-Path $tmp 'compat-old-statuses'; New-Item -ItemType Directory -Force $d | Out-Null
+    Set-Content (Join-Path $d 'settings.json') '{"version":1,"statuses":[{"id":"todo","name":"To do","color":"#6B7280","isClosed":false},{"id":"waiting","name":"Waiting","color":"#F59E0B","isClosed":false},{"id":"blocked","name":"Blocked","color":"#EF4444","isClosed":false},{"id":"done","name":"Done","color":"#10B981","isClosed":true}]}'
+    try {
+        Initialize-Storage -DataPath $d; $null = Initialize-AppState
+        foreach ($k in 'todo', 'waiting', 'blocked', 'done') { Assert-Eq (Get-StatusScoreValue $k $script:State.Settings.statuses) 10 "an existing '$k' status must stay at 10" }
+    } finally { Initialize-Storage -DataPath $tmp; $null = Initialize-AppState }
+}
+Test-Case 'status weights: validation, creation with a weight, edit, several statuses sharing one value, closed status stays unranked' {
+    Assert-Throws { Add-Status 'peso zero' '#111111' $false 0 } 'weight 0 accepted'
+    Assert-Throws { Add-Status 'peso undici' '#111111' $false 11 } 'weight 11 accepted'
+    Assert-Throws { Add-Status 'peso decimale' '#111111' $false 5.5 } 'a decimal weight was accepted'
+    Assert-Throws { Add-Status 'peso testo' '#111111' $false 'abc' } 'a text weight was accepted'
+    $a = Add-Status 'Committed test' '#123456' $false 6
+    $b = Add-Status 'Planned test' '#654321' $false 6
+    try {
+        Assert-Eq (Get-StatusById $a.id).scoreValue 6; Assert-Eq (Get-StatusById $b.id).scoreValue 6
+        Assert-Eq (Add-Status 'Default weight test' '#222222' $false).scoreValue 10 'a new status must default to 10'
+        Update-Status $a.id 'Committed test' '#123456' $false 3
+        Assert-Eq (Get-StatusScoreValue $a.id $script:State.Settings.statuses) 3
+        Update-Status $a.id 'Committed test' '#123456' $false          # no weight given: keeps the current one
+        Assert-Eq (Get-StatusScoreValue $a.id $script:State.Settings.statuses) 3 'editing without a weight changed it'
+        $t = Add-AppTask (New-In 'SW-2' 'chiuso' $null 'high' 'done')
+        Assert-True ($null -eq (Get-TaskById $t.id).score) 'a completed task must not be ranked'
+        $st = Reload-AppState
+        Assert-Eq (Get-StatusScoreValue $a.id $st.Settings.statuses) 3 'weight lost after reload'
+    } finally {
+        foreach ($s in @($script:State.Settings.statuses | Where-Object { $_.name -in 'Committed test', 'Planned test', 'Default weight test' })) { $null = Remove-Status $s.id }
+    }
+}
+Test-Case 'settings files: statuses without a weight load as 10 and invalid weights are repaired' {
+    $d = Join-Path $tmp 'compat-weight'; New-Item -ItemType Directory -Force $d | Out-Null
+    Set-Content (Join-Path $d 'settings.json') '{"version":1,"statuses":[{"id":"todo","name":"To do","color":"#6B7280","isClosed":false},{"id":"a","name":"A","color":"#111111","isClosed":false,"scoreValue":99},{"id":"b","name":"B","color":"#222222","isClosed":false,"scoreValue":0},{"id":"c","name":"C","color":"#333333","isClosed":false,"scoreValue":"abc"},{"id":"d","name":"D","color":"#444444","isClosed":false,"scoreValue":4}]}'
+    try {
+        Initialize-Storage -DataPath $d; $st = Initialize-AppState
+        Assert-Eq (Get-StatusById 'todo').scoreValue 10 'a status without weight must load as 10'
+        Assert-Eq (Get-StatusById 'a').scoreValue 10; Assert-Eq (Get-StatusById 'b').scoreValue 1
+        Assert-Eq (Get-StatusById 'c').scoreValue 10; Assert-Eq (Get-StatusById 'd').scoreValue 4
+    } finally { Initialize-Storage -DataPath $tmp; $null = Initialize-AppState }
+}
+
 Write-Host 'First-run name' -ForegroundColor Yellow
 Test-Case 'the name is required: asked while it is empty, empty or too long names are rejected, and the name survives a reload' {
     $oldName = $script:State.Settings.userName
@@ -755,7 +817,7 @@ Test-Case 'data folder switch protects existing data, copies current data, and p
 
         Initialize-Storage -DataPath $source
         $null = Initialize-AppState
-        $script:State.Settings.statuses.Add([pscustomobject]@{ id = 'shared-status'; name = 'Status A'; color = '#10B981'; isClosed = $false })
+        $script:State.Settings.statuses.Add([pscustomobject]@{ id = 'shared-status'; name = 'Status A'; color = '#10B981'; isClosed = $false; scoreValue = 7 })
         $script:State.Settings.priorities.Add([pscustomobject]@{ id = 'shared-priority'; name = 'Priority A'; value = 6; color = '#10B981' })
         $script:State.Settings.referents.Add([pscustomobject]@{ id = 'shared-owner'; name = 'Owner A' })
         $script:State.Settings.projects.Add([pscustomobject]@{ id = 'shared-project'; name = 'Project A' })
@@ -781,6 +843,8 @@ Test-Case 'data folder switch protects existing data, copies current data, and p
         Assert-Eq $script:State.Settings.statuses.Count 7 'default statuses were duplicated across languages'
         Assert-Eq $script:State.Settings.priorities.Count 6 'default priorities were duplicated across languages'
         Assert-Eq (Get-StatusById $taskA.statusId).name 'Status A' 'source task status ID was not remapped'
+        Assert-Eq (Get-StatusById $taskA.statusId).scoreValue 7 'the status weight was lost in the merge'
+        Assert-Eq (Get-StatusScoreValue $taskB.statusId $script:State.Settings.statuses) 10 'a status without weight must stay at 10 after the merge'
         Assert-Eq (Get-StatusById $taskB.statusId).name 'Status B' 'destination task status changed'
         Assert-Eq (Get-PriorityById $taskA.priorityId).name 'Priority A' 'source task priority ID was not remapped'
         Assert-Eq (Get-PriorityById $taskB.priorityId).name 'Priority B' 'destination task priority changed'

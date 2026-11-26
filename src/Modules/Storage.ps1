@@ -180,6 +180,7 @@ function Get-MergedAppDataState {
         $statusIds[[string]$item.id] = $id
         $targetSettings.statuses.Add([pscustomobject]@{
             id = $id; name = $item.name; color = $item.color; isClosed = [bool]$item.isClosed
+            scoreValue = (Get-StatusScoreValue $item.id $sourceSettings.statuses)
         })
     }
 
